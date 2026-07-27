@@ -3,15 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import client from '../api/client'
-
-const HOUR_START = 7
-const HOUR_END = 23
-const TOTAL_HOURS = HOUR_END - HOUR_START
-
-function toPercent(dt, openHour) {
-  const h = dt.getUTCHours() + dt.getUTCMinutes() / 60
-  return ((h - openHour) / TOTAL_HOURS) * 100
-}
+import { formatTime12, formatTimeOnly } from '../utils/format'
 
 function Timeline({ bookings, userId, selectedStart, selectedEnd, onSlotClick, openTime, closeTime }) {
   const [openH] = openTime.split(':').map(Number)
@@ -20,12 +12,17 @@ function Timeline({ bookings, userId, selectedStart, selectedEnd, onSlotClick, o
   for (let h = openH; h <= closeH; h++) hours.push(h)
   const totalH = closeH - openH
 
+  const formatHourLabel = (h) => {
+    const period = h >= 12 ? 'PM' : 'AM'
+    const h12 = h % 12 === 0 ? 12 : h % 12
+    return `${h12} ${period}`
+  }
+
   const handleClick = (e) => {
     const rect = e.currentTarget.getBoundingClientRect()
     const x = e.clientX - rect.left
     const frac = x / rect.width
     const clickedHour = openH + frac * totalH
-    // Snap to nearest 30 min
     const snapped = Math.round(clickedHour * 2) / 2
     const startH = Math.floor(snapped)
     const startM = snapped % 1 === 0.5 ? 30 : 0
@@ -42,11 +39,11 @@ function Timeline({ bookings, userId, selectedStart, selectedEnd, onSlotClick, o
   return (
     <div>
       {/* Legend */}
-      <div style={{ display: 'flex', gap: 20, marginBottom: 12, fontSize: '0.75rem' }}>
+      <div style={{ display: 'flex', gap: 20, marginBottom: 12, fontSize: '0.75rem', flexWrap: 'wrap' }}>
         {[
-          { color: 'rgba(220,38,38,0.5)',  border: 'rgba(220,38,38,0.6)',  label: 'Booked' },
+          { color: 'rgba(220,38,38,0.5)',  border: 'rgba(220,38,38,0.6)',  label: 'Booked / Class in Session' },
           { color: 'rgba(37,99,235,0.35)', border: 'rgba(37,99,235,0.5)',  label: 'Your Booking' },
-          { color: 'rgba(22,163,74,0.15)', border: 'rgba(22,163,74,0.4)',  label: 'Free (click to select)' },
+          { color: 'rgba(22,163,74,0.15)', border: 'rgba(22,163,74,0.4)',  label: 'Free (click to select slot)' },
         ].map(l => (
           <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <div style={{ width: 14, height: 14, background: l.color, border: `1px solid ${l.border}`, borderRadius: 3 }} />
@@ -55,26 +52,26 @@ function Timeline({ bookings, userId, selectedStart, selectedEnd, onSlotClick, o
         ))}
       </div>
 
-      {/* Timeline */}
+      {/* Timeline Bar */}
       <div
         style={{
           position: 'relative',
-          height: 80,
+          height: 84,
           background: 'var(--bg-elevated)',
           borderRadius: 'var(--radius)',
           overflow: 'hidden',
           cursor: 'crosshair',
-          minWidth: 500,
+          minWidth: 550,
         }}
         onClick={handleClick}
       >
-        {/* Hour lines */}
+        {/* Hour markers */}
         {hours.map(h => {
           const pct = ((h - openH) / totalH) * 100
           return (
             <div key={h} style={{ position: 'absolute', left: `${pct}%`, top: 0, bottom: 0, width: 1, background: 'var(--border)' }}>
               <span style={{ position: 'absolute', top: 4, left: 3, fontSize: '0.625rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                {h}:00
+                {formatHourLabel(h)}
               </span>
             </div>
           )
@@ -87,15 +84,15 @@ function Timeline({ bookings, userId, selectedStart, selectedEnd, onSlotClick, o
               position: 'absolute',
               left: `${((new Date(selectedStart).getUTCHours() + new Date(selectedStart).getUTCMinutes()/60 - openH) / totalH) * 100}%`,
               width: `${((new Date(selectedEnd) - new Date(selectedStart)) / 3600000 / totalH) * 100}%`,
-              top: '20%',
-              height: '60%',
+              top: '25%',
+              height: '55%',
               background: 'rgba(212,175,55,0.35)',
               border: '2px dashed var(--gold)',
               borderRadius: 6,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '0.625rem',
+              fontSize: '0.6875rem',
               color: 'var(--gold)',
               fontWeight: 700,
               zIndex: 10,
@@ -105,7 +102,7 @@ function Timeline({ bookings, userId, selectedStart, selectedEnd, onSlotClick, o
           </div>
         )}
 
-        {/* Bookings */}
+        {/* Booked slots */}
         {bookings.map(b => {
           const st = new Date(b.start_time)
           const en = new Date(b.end_time)
@@ -113,31 +110,36 @@ function Timeline({ bookings, userId, selectedStart, selectedEnd, onSlotClick, o
           const width = ((en - st) / 3600000 / totalH) * 100
           const isMine = b.user_id === userId
 
+          const timeLabel = `${formatTimeOnly(b.start_time)} – ${formatTimeOnly(b.end_time)}`
+          const title = `${b.purpose ? b.purpose + ' (' + timeLabel + ')' : (isMine ? 'Your Booking' : 'Booked Slot')}`
+
           return (
             <div
               key={b.id}
-              title={`${isMine ? 'Your booking' : 'Booked'}: ${st.getUTCHours()}:${String(st.getUTCMinutes()).padStart(2,'0')} – ${en.getUTCHours()}:${String(en.getUTCMinutes()).padStart(2,'0')}`}
+              title={title}
               style={{
                 position: 'absolute',
                 left: `${Math.max(0, left)}%`,
                 width: `${Math.min(100 - Math.max(0, left), width)}%`,
-                top: '20%',
-                height: '60%',
+                top: '25%',
+                height: '55%',
                 background: isMine ? 'rgba(37,99,235,0.35)' : 'rgba(220,38,38,0.35)',
-                border: `1px solid ${isMine ? 'rgba(37,99,235,0.5)' : 'rgba(220,38,38,0.5)'}`,
+                border: `1px solid ${isMine ? 'rgba(37,99,235,0.6)' : 'rgba(220,38,38,0.6)'}`,
                 borderRadius: 6,
                 display: 'flex',
                 alignItems: 'center',
                 paddingLeft: 6,
-                fontSize: '0.625rem',
+                paddingRight: 6,
+                fontSize: '0.65rem',
                 color: isMine ? '#93c5fd' : '#fca5a5',
                 fontWeight: 600,
                 zIndex: 5,
                 overflow: 'hidden',
                 whiteSpace: 'nowrap',
+                textOverflow: 'ellipsis',
               }}
             >
-              {isMine ? '⭐ Mine' : '✕'}
+              {isMine ? `⭐ ${b.purpose || 'My Booking'}` : (b.purpose || 'Booked')}
             </div>
           )
         })}
@@ -160,15 +162,28 @@ export default function ResourceDetail() {
   const today = new Date().toISOString().split('T')[0]
   const [date, setDate] = useState(today)
 
+  // Booking mode: 'single' (single session) or 'multi' (multi-day repeat)
+  const [bookingMode, setBookingMode] = useState('single')
+
+  // Form states
   const [form, setForm] = useState({
     start_time: '',
     end_time: '',
     purpose: '',
+    // Multi-day specific fields:
+    start_date: today,
+    end_date: today,
+    daily_start_time: '17:00',
+    daily_end_time: '19:00',
   })
   const [errors, setErrors] = useState({})
   const [clashInfo, setClashInfo] = useState(null)
 
-  const set = (k, v) => { setForm(p => ({ ...p, [k]: v })); setErrors(p => ({ ...p, [k]: '' })); setClashInfo(null) }
+  const set = (k, v) => {
+    setForm(p => ({ ...p, [k]: v }))
+    setErrors(p => ({ ...p, [k]: '' }))
+    setClashInfo(null)
+  }
 
   useEffect(() => {
     const fetchResource = async () => {
@@ -187,15 +202,16 @@ export default function ResourceDetail() {
       try {
         const res = await client.get(`/api/resources/${id}/bookings`, { params: { date } })
         setBookings(res.data)
-      } catch { setBookings([]) }
-      finally { setLoading(false) }
+      } catch {
+        setBookings([])
+      } finally {
+        setLoading(false)
+      }
     }
     if (id) fetchBookings()
   }, [id, date])
 
   const handleSlotClick = (start, end) => {
-    // Adjust date to selected date
-    const [dateStr] = date.split('T')
     const [, startTime] = start.split('T')
     const [, endTime] = end.split('T')
     set('start_time', `${date}T${startTime}`)
@@ -204,39 +220,101 @@ export default function ResourceDetail() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    const errs = {}
-    if (!form.start_time) errs.start_time = 'Select a start time'
-    if (!form.end_time) errs.end_time = 'Select an end time'
-    if (!form.purpose.trim()) errs.purpose = 'Purpose is required'
-    if (Object.keys(errs).length) { setErrors(errs); return }
-
-    setSubmitting(true)
     setClashInfo(null)
-    try {
-      const res = await client.post('/api/bookings', {
-        resource_id: parseInt(id),
-        start_time: new Date(form.start_time).toISOString(),
-        end_time: new Date(form.end_time).toISOString(),
-        purpose: form.purpose,
-      })
-      addToast('Booking confirmed! 🎉', 'success')
-      navigate('/booking-success', { state: { booking: res.data, resource } })
-    } catch (err) {
-      const data = err.response?.data
-      if (err.response?.status === 409) {
-        setClashInfo(data?.detail?.clashing_slot)
-        addToast(data?.detail?.message || 'Time slot is already booked', 'error')
-      } else if (err.response?.status === 400) {
-        if (data?.detail?.errors) {
-          setErrors(data.detail.errors)
+
+    if (bookingMode === 'single') {
+      const errs = {}
+      if (!form.start_time) errs.start_time = 'Select a start time'
+      if (!form.end_time) errs.end_time = 'Select an end time'
+      if (!form.purpose.trim()) errs.purpose = 'Purpose is required'
+      if (Object.keys(errs).length) { setErrors(errs); return }
+
+      setSubmitting(true)
+      try {
+        const res = await client.post('/api/bookings', {
+          resource_id: parseInt(id),
+          start_time: new Date(form.start_time).toISOString(),
+          end_time: new Date(form.end_time).toISOString(),
+          purpose: form.purpose,
+        })
+        addToast('Booking confirmed! 🎉', 'success')
+        navigate('/booking-success', { state: { booking: res.data, resource } })
+      } catch (err) {
+        const data = err.response?.data
+        if (err.response?.status === 409) {
+          setClashInfo(data?.detail?.clashing_slot)
+          addToast(data?.detail?.message || 'Time slot is already booked', 'error')
+        } else if (err.response?.status === 400) {
+          if (data?.detail?.errors) {
+            setErrors(data.detail.errors)
+          } else {
+            addToast(data?.detail || 'Validation error', 'error')
+          }
         } else {
-          addToast(data?.detail || 'Validation error', 'error')
+          addToast('Something went wrong. Please try again.', 'error')
         }
-      } else {
-        addToast('Something went wrong. Please try again.', 'error')
+      } finally {
+        setSubmitting(false)
       }
-    } finally {
-      setSubmitting(false)
+    } else {
+      // Multi-day booking flow
+      const errs = {}
+      if (!form.start_date) errs.start_date = 'Select start date'
+      if (!form.end_date) errs.end_date = 'Select end date'
+      if (!form.daily_start_time) errs.daily_start_time = 'Select daily start time'
+      if (!form.daily_end_time) errs.daily_end_time = 'Select daily end time'
+      if (!form.purpose.trim()) errs.purpose = 'Purpose is required'
+
+      const dStart = new Date(form.start_date)
+      const dEnd = new Date(form.end_date)
+      if (dEnd < dStart) errs.end_date = 'End date cannot be before start date'
+
+      if (Object.keys(errs).length) { setErrors(errs); return }
+
+      // Generate date array
+      const dateList = []
+      let cur = new Date(dStart)
+      while (cur <= dEnd) {
+        dateList.push(cur.toISOString().split('T')[0])
+        cur.setDate(cur.getDate() + 1)
+      }
+
+      if (dateList.length > 7) {
+        setErrors({ end_date: 'Multi-day booking is capped at max 7 consecutive days' })
+        return
+      }
+
+      setSubmitting(true)
+      let createdBooking = null
+      let failedDate = null
+
+      try {
+        for (const dStr of dateList) {
+          const sISO = new Date(`${dStr}T${form.daily_start_time}:00`).toISOString()
+          const eISO = new Date(`${dStr}T${form.daily_end_time}:00`).toISOString()
+
+          const res = await client.post('/api/bookings', {
+            resource_id: parseInt(id),
+            start_time: sISO,
+            end_time: eISO,
+            purpose: `${form.purpose} (Multi-Day Pass: ${dStr})`,
+          })
+          if (!createdBooking) createdBooking = res.data
+        }
+
+        addToast(`Successfully created ${dateList.length}-day booking! 🎉`, 'success')
+        navigate('/booking-success', { state: { booking: createdBooking, resource } })
+      } catch (err) {
+        const data = err.response?.data
+        if (err.response?.status === 409) {
+          setClashInfo(data?.detail?.clashing_slot)
+          addToast(`Slot clash detected! Could not complete full multi-day booking series.`, 'error')
+        } else {
+          addToast(data?.detail || 'Validation or student limit error', 'error')
+        }
+      } finally {
+        setSubmitting(false)
+      }
     }
   }
 
@@ -257,17 +335,17 @@ export default function ResourceDetail() {
     <div className="page">
       <div className="container" style={{ paddingTop: 40, paddingBottom: 60 }}>
 
-        {/* Back */}
+        {/* Back Button */}
         <button className="btn btn-ghost btn-sm" onClick={() => navigate('/resources')} style={{ marginBottom: 20 }}>
           ← Back to Resources
         </button>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 28, alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: 28, alignItems: 'start' }}>
 
-          {/* Left: Resource info + Timeline */}
+          {/* Left: Resource Info + Availability Timeline */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
 
-            {/* Resource Header */}
+            {/* Resource Card */}
             <div className="card" style={{ padding: 28 }}>
               <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', marginBottom: 16 }}>
                 <div style={{
@@ -296,14 +374,16 @@ export default function ResourceDetail() {
                 display: 'flex', gap: 20, marginTop: 16, paddingTop: 16,
                 borderTop: '1px solid var(--border)', fontSize: '0.875rem', color: 'var(--text-muted)'
               }}>
-                <span>⏰ Open: <strong style={{ color: 'var(--text-secondary)' }}>{resource.open_time} – {resource.close_time}</strong></span>
+                <span>⏰ Operating Hours: <strong style={{ color: 'var(--gold)' }}>{formatTime12(resource.open_time)} – {formatTime12(resource.close_time)}</strong></span>
               </div>
             </div>
 
-            {/* Timeline */}
+            {/* Availability Timeline */}
             <div className="card" style={{ padding: 24 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-                <h2 style={{ fontSize: '1.0625rem', fontWeight: 700 }}>Availability — {date}</h2>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+                <h2 style={{ fontSize: '1.0625rem', fontWeight: 700 }}>
+                  Availability Schedule
+                </h2>
                 <input
                   type="date"
                   className="form-input"
@@ -314,7 +394,7 @@ export default function ResourceDetail() {
                 />
               </div>
               {loading
-                ? <div className="skeleton" style={{ height: 80 }} />
+                ? <div className="skeleton" style={{ height: 84 }} />
                 : (
                   <div style={{ overflowX: 'auto' }}>
                     <Timeline
@@ -331,62 +411,148 @@ export default function ResourceDetail() {
               }
               {bookings.length === 0 && !loading && (
                 <p style={{ fontSize: '0.8125rem', color: 'var(--status-approved)', marginTop: 12, textAlign: 'center' }}>
-                  ✓ Fully available on this date
+                  ✓ Fully available on {date}
                 </p>
               )}
             </div>
           </div>
 
-          {/* Right: Booking Form */}
+          {/* Right: Booking Form with Single / Multi-Day Mode */}
           <div className="card" style={{ padding: 24, position: 'sticky', top: 'calc(var(--navbar-h) + 20px)' }}>
-            <h2 style={{ fontSize: '1.0625rem', fontWeight: 700, marginBottom: 20 }}>Book This Resource</h2>
+
+            {/* Mode Switcher Tabs */}
+            <div className="filter-tabs" style={{ marginBottom: 20, width: '100%' }}>
+              <button
+                type="button"
+                className={`filter-tab ${bookingMode === 'single' ? 'active' : ''}`}
+                style={{ flex: 1, textAlign: 'center' }}
+                onClick={() => setBookingMode('single')}
+              >
+                Single Session
+              </button>
+              <button
+                type="button"
+                className={`filter-tab ${bookingMode === 'multi' ? 'active' : ''}`}
+                style={{ flex: 1, textAlign: 'center' }}
+                onClick={() => setBookingMode('multi')}
+              >
+                Multi-Day Booking
+              </button>
+            </div>
+
+            <h2 style={{ fontSize: '1.0625rem', fontWeight: 700, marginBottom: 16 }}>
+              {bookingMode === 'single' ? 'Single Booking Form' : 'Multi-Day Recurring Schedule'}
+            </h2>
 
             {clashInfo && (
               <div style={{
                 background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.3)',
                 borderRadius: 'var(--radius)', padding: 14, marginBottom: 16, fontSize: '0.8125rem'
               }}>
-                <p style={{ fontWeight: 600, color: '#f87171', marginBottom: 4 }}>⚠ Slot Already Booked</p>
+                <p style={{ fontWeight: 600, color: '#f87171', marginBottom: 4 }}>⚠ Time Slot Conflict</p>
                 <p style={{ color: 'var(--text-muted)' }}>
-                  Conflicts with {new Date(clashInfo.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  {' – '}
-                  {new Date(clashInfo.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  Clashes with an existing booking ({formatTimeOnly(clashInfo.start_time)} – {formatTimeOnly(clashInfo.end_time)})
                 </p>
               </div>
             )}
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div className="form-group">
-                <label className="form-label">Start Time</label>
-                <input
-                  type="datetime-local"
-                  className={`form-input ${errors.start_time ? 'error' : ''}`}
-                  value={form.start_time}
-                  min={`${today}T00:00`}
-                  onChange={e => set('start_time', e.target.value)}
-                  style={{ colorScheme: 'dark' }}
-                />
-                {errors.start_time && <div className="form-error">⚠ {errors.start_time}</div>}
-              </div>
+
+              {bookingMode === 'single' ? (
+                <>
+                  <div className="form-group">
+                    <label className="form-label">Start Date &amp; Time</label>
+                    <input
+                      type="datetime-local"
+                      className={`form-input ${errors.start_time ? 'error' : ''}`}
+                      value={form.start_time}
+                      min={`${today}T00:00`}
+                      onChange={e => set('start_time', e.target.value)}
+                      style={{ colorScheme: 'dark' }}
+                    />
+                    {errors.start_time && <div className="form-error">⚠ {errors.start_time}</div>}
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">End Date &amp; Time</label>
+                    <input
+                      type="datetime-local"
+                      className={`form-input ${errors.end_time ? 'error' : ''}`}
+                      value={form.end_time}
+                      min={form.start_time || `${today}T00:00`}
+                      onChange={e => set('end_time', e.target.value)}
+                      style={{ colorScheme: 'dark' }}
+                    />
+                    {errors.end_time && <div className="form-error">⚠ {errors.end_time}</div>}
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Multi-Day Booking Mode: Date Range + Time Per Day */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <div className="form-group">
+                      <label className="form-label">Start Date</label>
+                      <input
+                        type="date"
+                        className={`form-input ${errors.start_date ? 'error' : ''}`}
+                        value={form.start_date}
+                        min={today}
+                        onChange={e => set('start_date', e.target.value)}
+                        style={{ colorScheme: 'dark' }}
+                      />
+                      {errors.start_date && <div className="form-error">⚠ {errors.start_date}</div>}
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">End Date</label>
+                      <input
+                        type="date"
+                        className={`form-input ${errors.end_date ? 'error' : ''}`}
+                        value={form.end_date}
+                        min={form.start_date || today}
+                        onChange={e => set('end_date', e.target.value)}
+                        style={{ colorScheme: 'dark' }}
+                      />
+                      {errors.end_date && <div className="form-error">⚠ {errors.end_date}</div>}
+                    </div>
+                  </div>
+
+                  <div style={{ background: 'var(--bg-elevated)', padding: 14, borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+                    <p style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--gold)', marginBottom: 10 }}>
+                      ⏰ Daily Time Window (Applies to Each Day)
+                    </p>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                      <div className="form-group">
+                        <label className="form-label">Daily Start</label>
+                        <input
+                          type="time"
+                          className="form-input"
+                          value={form.daily_start_time}
+                          onChange={e => set('daily_start_time', e.target.value)}
+                          style={{ colorScheme: 'dark' }}
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label className="form-label">Daily End</label>
+                        <input
+                          type="time"
+                          className="form-input"
+                          value={form.daily_end_time}
+                          onChange={e => set('daily_end_time', e.target.value)}
+                          style={{ colorScheme: 'dark' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
 
               <div className="form-group">
-                <label className="form-label">End Time</label>
-                <input
-                  type="datetime-local"
-                  className={`form-input ${errors.end_time ? 'error' : ''}`}
-                  value={form.end_time}
-                  min={form.start_time || `${today}T00:00`}
-                  onChange={e => set('end_time', e.target.value)}
-                  style={{ colorScheme: 'dark' }}
-                />
-                {errors.end_time && <div className="form-error">⚠ {errors.end_time}</div>}
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Purpose</label>
+                <label className="form-label">Purpose / Event Details</label>
                 <textarea
                   className={`form-textarea ${errors.purpose ? 'error' : ''}`}
-                  placeholder="Briefly describe your purpose..."
+                  placeholder="e.g. LNMIIT Hackathon Practice, Society Event..."
                   value={form.purpose}
                   onChange={e => set('purpose', e.target.value)}
                   rows={3}
@@ -394,8 +560,8 @@ export default function ResourceDetail() {
                 {errors.purpose && <div className="form-error">⚠ {errors.purpose}</div>}
               </div>
 
-              {/* Duration preview */}
-              {form.start_time && form.end_time && (
+              {/* Duration Preview */}
+              {bookingMode === 'single' && form.start_time && form.end_time && (
                 <div style={{
                   background: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)',
                   padding: '10px 14px', fontSize: '0.8125rem', color: 'var(--text-muted)'
@@ -407,7 +573,9 @@ export default function ResourceDetail() {
               )}
 
               <button type="submit" className="btn btn-primary btn-lg w-full" disabled={submitting}>
-                {submitting ? <><div className="spinner" /> Submitting...</> : 'Confirm Booking →'}
+                {submitting ? <><div className="spinner" /> Submitting...</> : (
+                  bookingMode === 'single' ? 'Confirm Booking →' : 'Confirm Multi-Day Bookings →'
+                )}
               </button>
             </form>
           </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import client from '../api/client'
+import { formatTime12 } from '../utils/format'
 
 const CATEGORY_META = {
   hall:      { icon: '🏛️', label: 'Hall',      color: '#c0484f' },
@@ -169,7 +170,7 @@ export default function Resources() {
                       </div>
                       <div className="resource-hours">
                         <span>⏰</span>
-                        Open {r.open_time} – {r.close_time}
+                        Open {formatTime12(r.open_time)} – {formatTime12(r.close_time)}
                       </div>
                     </Link>
                   )

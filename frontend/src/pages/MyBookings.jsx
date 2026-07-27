@@ -11,12 +11,7 @@ const TABS = [
   { value: 'cancelled',  label: 'Cancelled' },
 ]
 
-function fmt(dt) {
-  return new Date(dt).toLocaleString('en-IN', {
-    weekday: 'short', day: 'numeric', month: 'short',
-    hour: '2-digit', minute: '2-digit', hour12: true
-  })
-}
+import { formatDateTime, formatTimeOnly } from '../utils/format'
 
 export default function MyBookings() {
   const { user } = useAuth()
@@ -135,7 +130,7 @@ export default function MyBookings() {
                   <div className="booking-item-name">{b.resource?.name || `Resource #${b.resource_id}`}</div>
                   <div className="booking-item-time">
                     <span>📅</span>
-                    {fmt(b.start_time)} → {new Date(b.end_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                    {formatDateTime(b.start_time)} → {formatTimeOnly(b.end_time)}
                   </div>
                   {b.purpose && (
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>
