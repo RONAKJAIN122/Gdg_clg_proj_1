@@ -72,12 +72,14 @@ async def health():
 
 @app.get("/health/email", tags=["health"])
 async def health_email():
-    """Diagnostic: check SMTP config loaded on this instance."""
+    """Diagnostic: check SMTP & HTTP email config loaded on this instance."""
     return {
         "smtp_host": settings.SMTP_HOST,
         "smtp_port": settings.SMTP_PORT,
         "smtp_user": settings.SMTP_USER,
         "smtp_pass_set": bool(settings.SMTP_PASS),
-        "smtp_pass_last4": settings.SMTP_PASS[-4:] if settings.SMTP_PASS else "EMPTY",
+        "brevo_api_key_set": bool(settings.BREVO_API_KEY),
+        "brevo_api_key_last4": settings.BREVO_API_KEY[-4:] if settings.BREVO_API_KEY else "NOT SET",
+        "resend_api_key_set": bool(settings.RESEND_API_KEY),
         "email_from": settings.EMAIL_FROM,
     }
