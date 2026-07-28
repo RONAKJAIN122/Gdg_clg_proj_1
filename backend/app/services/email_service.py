@@ -43,7 +43,7 @@ async def _send_via_brevo(to: str, subject: str, html_body: str) -> None:
                 "Content-Type": "application/json",
             },
             json={
-                "sender": {"name": "CampusDesk", "email": settings.SMTP_USER or settings.EMAIL_FROM or "lnmiiitopt@gmail.com"},
+                "sender": {"name": "CampusDesk", "email": settings.EMAIL_FROM or settings.SMTP_USER or "lnmiiitopt@gmail.com"},
                 "to": [{"email": to}],
                 "subject": subject,
                 "htmlContent": html_body,
