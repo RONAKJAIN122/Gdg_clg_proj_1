@@ -1,9 +1,9 @@
 """
 Email service using aiosmtplib (async SMTP).
-Configured for Ethereal Mail (free fake inbox).
-View sent emails at: https://ethereal.email/messages
+Configured for Gmail SMTP with App Password.
 """
 import logging
+import traceback
 
 import aiosmtplib
 from email.mime.multipart import MIMEMultipart
@@ -13,7 +13,8 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-ETHEREAL_INBOX = "https://ethereal.email/messages"
+# Diagnostic: print SMTP config on startup so we can verify in Render logs
+print(f"[EMAIL CONFIG] SMTP_HOST={settings.SMTP_HOST} SMTP_PORT={settings.SMTP_PORT} SMTP_USER={settings.SMTP_USER} EMAIL_FROM={settings.EMAIL_FROM} SMTP_PASS={'***' + settings.SMTP_PASS[-4:] if settings.SMTP_PASS else 'EMPTY'}")
 
 
 async def _send_email(to: str, subject: str, html_body: str) -> None:
@@ -42,8 +43,11 @@ async def _send_email(to: str, subject: str, html_body: str) -> None:
         logger.info(f"[EMAIL OK] Sent real email to {to}")
         print(f"\n[EMAIL SENT] Sent real email to {to} from {settings.EMAIL_FROM}\n")
     except Exception as e:
+        # Print loudly so it appears in Render logs
+        print(f"\n[EMAIL ERROR] Failed to send to {to}: {type(e).__name__}: {e}")
+        print(f"[EMAIL ERROR] SMTP_HOST={settings.SMTP_HOST} SMTP_PORT={settings.SMTP_PORT} SMTP_USER={settings.SMTP_USER}")
+        traceback.print_exc()
         logger.error(f"Email send failed ({type(e).__name__}): {e}")
-        logger.info(f"[EMAIL FALLBACK] Could not deliver to {to}")
 
 
 async def send_otp_email(to: str, name: str, otp: str) -> None:

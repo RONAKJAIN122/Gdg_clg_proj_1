@@ -68,3 +68,16 @@ app.include_router(admin.router)
 @app.get("/health", tags=["health"])
 async def health():
     return {"status": "ok", "version": "1.0.0"}
+
+
+@app.get("/health/email", tags=["health"])
+async def health_email():
+    """Diagnostic: check SMTP config loaded on this instance."""
+    return {
+        "smtp_host": settings.SMTP_HOST,
+        "smtp_port": settings.SMTP_PORT,
+        "smtp_user": settings.SMTP_USER,
+        "smtp_pass_set": bool(settings.SMTP_PASS),
+        "smtp_pass_last4": settings.SMTP_PASS[-4:] if settings.SMTP_PASS else "EMPTY",
+        "email_from": settings.EMAIL_FROM,
+    }
