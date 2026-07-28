@@ -52,9 +52,11 @@ export default function Login() {
       addToast('OTP sent! Check your email (or server console in dev)', 'success')
       setTimeout(() => otpRefs.current[0]?.focus(), 100)
     } catch (err) {
-      const msg = err.response?.data?.detail
+      const msg = typeof err.response?.data?.detail === 'string' 
+        ? err.response.data.detail 
+        : (Array.isArray(err.response?.data?.detail) ? err.response.data.detail[0]?.msg : null)
       if (err.response?.status === 429) {
-        setError('Too many requests. Please wait 10 minutes before trying again.')
+        setError(msg || 'Too many requests. Please wait 10 minutes before trying again.')
       } else {
         setError(msg || 'Failed to send OTP. Please try again.')
       }
