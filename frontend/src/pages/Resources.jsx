@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import client from '../api/client'
 import { formatTime12 } from '../utils/format'
 
@@ -36,13 +36,23 @@ function ResourceSkeleton() {
 
 export default function Resources() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const categoryParam = searchParams.get('category') || ''
+
   const [resources, setResources] = useState([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [searchInput, setSearchInput] = useState('')
-  const [category, setCategory] = useState('')
+  const [category, setCategory] = useState(categoryParam)
+
+  // Sync category if URL search param changes
+  useEffect(() => {
+    if (categoryParam !== category) {
+      setCategory(categoryParam)
+    }
+  }, [categoryParam])
 
   const LIMIT = 9
 

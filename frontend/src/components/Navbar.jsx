@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
+import { useTheme } from '../context/ThemeContext'
 
 const BOOKING_ITEMS = [
   { label: 'Hall Booking',      icon: '🏛️', path: '/book/hall' },
@@ -19,23 +20,21 @@ const USER_MENU_ITEMS = [
 export default function Navbar() {
   const { user, logout, isAdmin, isLoggedIn } = useAuth()
   const { addToast } = useToast()
+  const { theme, toggleTheme } = useTheme()
   const location = useLocation()
   const navigate = useNavigate()
 
   const [bookingOpen, setBookingOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
-  const [notifOpen, setNotifOpen] = useState(false)
 
   const bookingRef = useRef()
   const userRef = useRef()
-  const notifRef = useRef()
 
   // Close dropdowns on outside click
   useEffect(() => {
     const handler = (e) => {
       if (bookingRef.current && !bookingRef.current.contains(e.target)) setBookingOpen(false)
       if (userRef.current && !userRef.current.contains(e.target)) setUserMenuOpen(false)
-      if (notifRef.current && !notifRef.current.contains(e.target)) setNotifOpen(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
@@ -45,7 +44,6 @@ export default function Navbar() {
   useEffect(() => {
     setBookingOpen(false)
     setUserMenuOpen(false)
-    setNotifOpen(false)
   }, [location.pathname])
 
   const handleLogout = () => {
@@ -144,36 +142,17 @@ export default function Navbar() {
 
         {/* Actions */}
         <div className="navbar-actions">
+          <button
+            className="theme-btn"
+            onClick={toggleTheme}
+            title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+            aria-label="Toggle Theme"
+          >
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
+
           {isLoggedIn ? (
             <>
-              {/* Notification Bell */}
-              <div ref={notifRef} style={{ position: 'relative' }}>
-                <button className="notif-btn" onClick={() => setNotifOpen(o => !o)} title="Notifications">
-                  🔔
-                  <span className="notif-badge">3</span>
-                </button>
-                {notifOpen && (
-                  <div className="nav-dropdown-menu" style={{ right: 0, left: 'auto', width: 300 }}>
-                    <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', marginBottom: 8 }}>
-                      <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>Notifications</span>
-                    </div>
-                    {[
-                      { icon: '✅', msg: 'Seminar Hall booking approved', time: '2h ago' },
-                      { icon: '⏰', msg: 'Music Room booking in 1 hour', time: '5h ago' },
-                      { icon: '📋', msg: 'Submit faculty approval document', time: '1d ago' },
-                    ].map((n, i) => (
-                      <div key={i} className="nav-dropdown-item" style={{ gap: 12 }}>
-                        <span style={{ fontSize: '1.1rem' }}>{n.icon}</span>
-                        <span style={{ flex: 1 }}>
-                          <div style={{ fontSize: '0.8125rem', color: 'var(--text-primary)', fontWeight: 500 }}>{n.msg}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>{n.time}</div>
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
               {/* User Avatar */}
               <div className="user-menu" ref={userRef}>
                 <div className="user-avatar" onClick={() => setUserMenuOpen(o => !o)} title={user.name}>
@@ -203,7 +182,7 @@ export default function Navbar() {
                       <span>⇥</span>
                       Sign Out
                     </button>
-                  </div>
+                    </div>
                 )}
               </div>
             </>

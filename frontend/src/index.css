@@ -11,12 +11,13 @@
 }
 
 /* ── Design Tokens ─────────────────────────────────────────── */
-:root {
+:root,
+[data-theme="dark"] {
   /* Brand */
   --maroon:         #7A0F17;
   --crimson:        #8E1E24;
   --maroon-light:   #A0222B;
-  --maroon-dim:     rgba(122, 15, 23, 0.15);
+  --maroon-dim:     rgba(122, 15, 23, 0.2);
 
   /* Backgrounds */
   --bg-base:        #0F1115;
@@ -25,7 +26,7 @@
 
   /* Cards */
   --card:           #20252D;
-  --card-hover:     #252B35;
+  --card-hover:     #282F39;
 
   /* Accent */
   --gold:           #D4AF37;
@@ -65,6 +66,144 @@
   /* Layout */
   --navbar-h: 68px;
   --max-w: 1200px;
+}
+
+[data-theme="light"] {
+  /* Brand */
+  --maroon:         #7A0F17;
+  --crimson:        #8E1E24;
+  --maroon-light:   #A0222B;
+  --maroon-dim:     rgba(122, 15, 23, 0.08);
+
+  /* Backgrounds */
+  --bg-base:        #F1F5F9;
+  --bg-surface:     #FFFFFF;
+  --bg-elevated:    #E2E8F0;
+
+  /* Cards */
+  --card:           #FFFFFF;
+  --card-hover:     #F8FAFC;
+
+  /* Accent */
+  --gold:           #B8950F;
+  --gold-dim:       rgba(184, 149, 15, 0.12);
+
+  /* Text */
+  --text-primary:   #0F172A;
+  --text-secondary: #334155;
+  --text-muted:     #64748B;
+
+  /* Borders */
+  --border:         #CBD5E1;
+  --border-focus:   rgba(122, 15, 23, 0.6);
+
+  /* Status */
+  --status-pending:   #D97706;
+  --status-approved:  #16A34A;
+  --status-rejected:  #DC2626;
+  --status-completed: #2563EB;
+
+  /* Shadows */
+  --shadow-sm:  0 1px 3px rgba(15,23,42,0.08);
+  --shadow:     0 4px 14px rgba(15,23,42,0.1);
+  --shadow-lg:  0 12px 36px rgba(15,23,42,0.14);
+  --shadow-red: 0 8px 24px rgba(122,15,23,0.2);
+}
+
+/* ── Light Theme Uniform Button & Input Contrast Overrides ── */
+[data-theme="light"] .btn-secondary {
+  background: #E2E8F0;
+  color: #0F172A;
+  border: 1px solid #CBD5E1;
+  font-weight: 600;
+}
+
+[data-theme="light"] .btn-secondary:hover:not(:disabled) {
+  background: #CBD5E1;
+  border-color: #64748B;
+  color: #0F172A;
+}
+
+[data-theme="light"] .btn-ghost {
+  color: #334155;
+  border: 1px solid #E2E8F0;
+}
+
+[data-theme="light"] .btn-ghost:hover:not(:disabled) {
+  background: #E2E8F0;
+  border-color: #CBD5E1;
+  color: #0F172A;
+}
+
+[data-theme="light"] .theme-btn {
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  color: #0F172A;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+[data-theme="light"] .theme-btn:hover {
+  background: #F1F5F9;
+  border-color: #7A0F17;
+  color: #7A0F17;
+}
+
+[data-theme="light"] .form-input,
+[data-theme="light"] .form-select,
+[data-theme="light"] .form-textarea {
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  color: #0F172A;
+}
+
+[data-theme="light"] .form-input:focus,
+[data-theme="light"] .form-select:focus,
+[data-theme="light"] .form-textarea:focus {
+  background: #FFFFFF;
+  border-color: #7A0F17;
+  box-shadow: 0 0 0 3px rgba(122, 15, 23, 0.15);
+}
+
+[data-theme="light"] .booking-card {
+  background: #FFFFFF !important;
+  border: 1px solid #CBD5E1 !important;
+  box-shadow: 0 12px 36px rgba(15,23,42,0.12) !important;
+}
+
+[data-theme="light"] .card {
+  background: #FFFFFF;
+  border-color: #E2E8F0;
+}
+
+[data-theme="light"] .card:hover {
+  border-color: #CBD5E1;
+}
+
+[data-theme="light"] .stat-card {
+  background: #FFFFFF !important;
+  border: 1px solid #E2E8F0 !important;
+}
+
+[data-theme="light"] .page-btn {
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  color: #334155;
+}
+
+[data-theme="light"] .page-btn:hover:not(:disabled) {
+  background: #F1F5F9;
+  color: #0F172A;
+}
+
+[data-theme="light"] .page-btn.active {
+  background: #7A0F17;
+  color: #FFFFFF;
+  border-color: #7A0F17;
+}
+
+[data-theme="light"] .user-avatar {
+  background: #7A0F17;
+  color: #FFFFFF;
 }
 
 /* ── Base ──────────────────────────────────────────────────── */
@@ -1322,6 +1461,28 @@ h1, h2, h3, h4, h5, h6 {
 .booking-item:hover {
   border-color: rgba(212,175,55,0.2);
   background: var(--card-hover);
+}
+
+/* ── Theme Toggle Button ───────────────────────────────────── */
+.theme-btn {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.theme-btn:hover {
+  background: var(--card-hover);
+  border-color: var(--gold);
+  transform: scale(1.05);
 }
 
 .booking-item-resource {

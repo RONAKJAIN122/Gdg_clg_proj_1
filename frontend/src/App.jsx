@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { ToastProvider } from './context/ToastContext'
+import { ThemeProvider } from './context/ThemeContext'
 import Navbar from './components/Navbar'
 import MobileNav from './components/MobileNav'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -22,9 +23,10 @@ function BookingPage({ type }) {
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <ToastProvider>
-          <Navbar />
+      <ThemeProvider>
+        <AuthProvider>
+          <ToastProvider>
+            <Navbar />
           <main className="page">
             <Routes>
               {/* Public */}
@@ -75,8 +77,9 @@ export default function App() {
             </Routes>
           </main>
           <MobileNav />
-        </ToastProvider>
-      </AuthProvider>
+          </ToastProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   )
 }

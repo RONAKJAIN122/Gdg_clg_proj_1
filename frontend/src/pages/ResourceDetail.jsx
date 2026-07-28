@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import client from '../api/client'
@@ -128,6 +128,7 @@ export default function ResourceDetail() {
   const { user } = useAuth()
   const { addToast } = useToast()
   const navigate = useNavigate()
+  const location = useLocation()
 
   const [resource, setResource] = useState(null)
   const [bookings, setBookings] = useState([])
@@ -136,11 +137,21 @@ export default function ResourceDetail() {
 
   const todayStr = new Date().toISOString().split('T')[0]
 
-  const [form, setForm] = useState({
-    booking_date: todayStr,
-    start_time: '10:00',
-    end_time: '11:00',
-    purpose: '',
+  // Auto-fill initial form values if the user filled out the quick booking form on the Home page
+  const [form, setForm] = useState(() => {
+    let draft = location.state?.draft
+    if (!draft) {
+      try {
+        const raw = sessionStorage.getItem('bookingFormDraft')
+        if (raw) draft = JSON.parse(raw)
+      } catch (e) {}
+    }
+    return {
+      booking_date: draft?.date || todayStr,
+      start_time: draft?.start_time || '10:00',
+      end_time: draft?.end_time || '11:00',
+      purpose: draft?.purpose || '',
+    }
   })
   const [errors, setErrors] = useState({})
   const [clashInfo, setClashInfo] = useState(null)
@@ -193,6 +204,7 @@ export default function ResourceDetail() {
         end_time: endISO,
         purpose: form.purpose,
       })
+      sessionStorage.removeItem('bookingFormDraft')
       addToast('Booking confirmed!', 'success')
       navigate('/booking-success', { state: { booking: res.data, resource } })
     } catch (err) {
@@ -274,7 +286,7 @@ export default function ResourceDetail() {
                 <input
                   type="date"
                   className="form-input"
-                  style={{ width: 'auto', colorScheme: 'dark' }}
+                  style={{ width: 'auto' }}
                   value={form.booking_date}
                   min={todayStr}
                   onChange={e => set('booking_date', e.target.value)}
@@ -330,7 +342,6 @@ export default function ResourceDetail() {
                   value={form.booking_date}
                   min={todayStr}
                   onChange={e => set('booking_date', e.target.value)}
-                  style={{ colorScheme: 'dark' }}
                 />
                 {errors.booking_date && <div className="form-error">⚠ {errors.booking_date}</div>}
               </div>
