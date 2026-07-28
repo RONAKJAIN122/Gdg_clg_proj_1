@@ -41,6 +41,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import and_, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models import Booking, BookingStatus, Resource, User, WaitlistEntry
 from app.schemas import BookingCreate
@@ -112,9 +113,10 @@ def _validate_booking_times(start: datetime, end: datetime, resource: Resource) 
         )
 
     if errors:
+        first_msg = next(iter(errors.values()))
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"errors": errors},
+            detail={"message": first_msg, "errors": errors},
         )
 
 
@@ -173,20 +175,22 @@ async def _check_student_limit(db: AsyncSession, user_id: int, resource_id: int)
     if count >= 2:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You already have 2 upcoming confirmed bookings for this resource",
+            detail={"message": "You already have 2 upcoming confirmed bookings for this resource", "errors": {"limit": "Student limit reached"}},
         )
 
 
 async def create_booking(db: AsyncSession, data: BookingCreate, user: User) -> Booking:
     """
     Create a booking with full validation + concurrency-safe overlap check.
-    The resource row is locked for the entire transaction to prevent races.
+    The resource row is locked for the duration of the transaction to prevent races.
+    SQLAlchemy auto-begins a transaction on first SQL execution, so we must NOT
+    call db.begin() here — just use the existing transaction and commit at the end.
     """
     start = _to_utc(data.start_time)
     end = _to_utc(data.end_time)
 
-    async with db.begin():
-        # Step 1: Lock the resource row — concurrent requests queue here
+    try:
+        # Step 1: Lock the resource row — concurrent booking attempts queue here
         resource = await _lock_resource(db, data.resource_id)
 
         # Step 2: Validate times against business rules
@@ -211,18 +215,34 @@ async def create_booking(db: AsyncSession, data: BookingCreate, user: User) -> B
         )
         db.add(booking)
         await db.flush()
-        await db.refresh(booking)
-        # Load relationships
-        await db.refresh(booking, ["user", "resource"])
 
-    return booking
+        # Eagerly load relationships before commit so response serialization works
+        result = await db.execute(
+            select(Booking)
+            .options(selectinload(Booking.user), selectinload(Booking.resource))
+            .where(Booking.id == booking.id)
+        )
+        booking = result.scalar_one()
+        await db.commit()
+
+        return booking
+
+    except HTTPException:
+        await db.rollback()
+        raise
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Booking failed due to server error: {str(e)}"
+        ) from e
 
 
 async def cancel_booking(db: AsyncSession, booking_id: int, user: User) -> Booking:
     """Cancel a booking. Owners can cancel their own; admins can cancel any."""
     from app.models import UserRole
 
-    async with db.begin():
+    try:
         result = await db.execute(
             select(Booking).where(Booking.id == booking_id).with_for_update()
         )
@@ -260,7 +280,6 @@ async def cancel_booking(db: AsyncSession, booking_id: int, user: User) -> Booki
         first_waiter = wl_result.scalar_one_or_none()
 
         if first_waiter:
-            # Check if the slot is still available for the waiter
             overlap_result = await db.execute(
                 select(Booking).where(
                     and_(
@@ -272,7 +291,6 @@ async def cancel_booking(db: AsyncSession, booking_id: int, user: User) -> Booki
                 )
             )
             if not overlap_result.scalar_one_or_none():
-                # Promote the waiter
                 new_booking = Booking(
                     user_id=first_waiter.user_id,
                     resource_id=booking.resource_id,
@@ -285,7 +303,6 @@ async def cancel_booking(db: AsyncSession, booking_id: int, user: User) -> Booki
                 await db.delete(first_waiter)
                 await db.flush()
 
-                # Load user for email
                 user_result = await db.execute(
                     select(User).where(User.id == first_waiter.user_id)
                 )
@@ -295,7 +312,6 @@ async def cancel_booking(db: AsyncSession, booking_id: int, user: User) -> Booki
                 )
                 resource = resource_result.scalar_one()
 
-                # Send email (non-blocking — fire after commit)
                 import asyncio
                 asyncio.create_task(
                     send_waitlist_promotion_email(
@@ -306,10 +322,26 @@ async def cancel_booking(db: AsyncSession, booking_id: int, user: User) -> Booki
                     )
                 )
 
-        await db.refresh(booking)
-        await db.refresh(booking, ["user", "resource"])
+        # Eagerly reload with relationships for serialization
+        result = await db.execute(
+            select(Booking)
+            .options(selectinload(Booking.user), selectinload(Booking.resource))
+            .where(Booking.id == booking_id)
+        )
+        booking = result.scalar_one()
+        await db.commit()
 
-    return booking
+        return booking
+
+    except HTTPException:
+        await db.rollback()
+        raise
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Cancellation failed: {str(e)}"
+        ) from e
 
 
 async def run_scheduler_jobs(db_factory) -> None:

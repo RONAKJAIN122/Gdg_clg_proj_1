@@ -5,6 +5,23 @@ import { useToast } from '../context/ToastContext'
 import client from '../api/client'
 import { formatTime12, formatTimeOnly } from '../utils/format'
 
+// Helper to generate 30-min interval 12-hour time options between open_time and close_time
+function generateTimeOptions(openTimeStr = '09:00', closeTimeStr = '21:00') {
+  const [openH] = openTimeStr.split(':').map(Number)
+  const [closeH] = closeTimeStr.split(':').map(Number)
+  const options = []
+
+  for (let h = openH; h <= closeH; h++) {
+    for (let m of [0, 30]) {
+      if (h === closeH && m > 0) break
+      const val24 = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+      const label12 = formatTime12(val24)
+      options.push({ value: val24, label: label12 })
+    }
+  }
+  return options
+}
+
 function Timeline({ bookings, userId, selectedStart, selectedEnd, onSlotClick, openTime, closeTime }) {
   const [openH] = openTime.split(':').map(Number)
   const [closeH] = closeTime.split(':').map(Number)
@@ -26,14 +43,17 @@ function Timeline({ bookings, userId, selectedStart, selectedEnd, onSlotClick, o
     const snapped = Math.round(clickedHour * 2) / 2
     const startH = Math.floor(snapped)
     const startM = snapped % 1 === 0.5 ? 30 : 0
-    const endH = startH + 1
-    if (endH > closeH) return
-    const today = new Date()
-    const base = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`
-    onSlotClick(
-      `${base}T${String(startH).padStart(2,'0')}:${String(startM).padStart(2,'0')}:00`,
-      `${base}T${String(endH).padStart(2,'0')}:${String(startM).padStart(2,'0')}:00`,
-    )
+    let endH = startH + 1
+    let endM = startM
+    if (endH > closeH) {
+      endH = closeH
+      endM = 0
+    }
+
+    const startTime24 = `${String(startH).padStart(2, '0')}:${String(startM).padStart(2, '0')}`
+    const endTime24 = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`
+
+    onSlotClick(startTime24, endTime24)
   }
 
   return (
@@ -41,9 +61,9 @@ function Timeline({ bookings, userId, selectedStart, selectedEnd, onSlotClick, o
       {/* Legend */}
       <div style={{ display: 'flex', gap: 20, marginBottom: 12, fontSize: '0.75rem', flexWrap: 'wrap' }}>
         {[
-          { color: 'rgba(220,38,38,0.5)',  border: 'rgba(220,38,38,0.6)',  label: 'Booked / Class in Session' },
+          { color: 'rgba(220,38,38,0.5)',  border: 'rgba(220,38,38,0.6)',  label: 'Booked / Class' },
           { color: 'rgba(37,99,235,0.35)', border: 'rgba(37,99,235,0.5)',  label: 'Your Booking' },
-          { color: 'rgba(22,163,74,0.15)', border: 'rgba(22,163,74,0.4)',  label: 'Free (click to select slot)' },
+          { color: 'rgba(22,163,74,0.15)', border: 'rgba(22,163,74,0.4)',  label: 'Free (click to select)' },
         ].map(l => (
           <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <div style={{ width: 14, height: 14, background: l.color, border: `1px solid ${l.border}`, borderRadius: 3 }} />
@@ -60,7 +80,7 @@ function Timeline({ bookings, userId, selectedStart, selectedEnd, onSlotClick, o
           background: 'var(--bg-elevated)',
           borderRadius: 'var(--radius)',
           overflow: 'hidden',
-          cursor: 'crosshair',
+          cursor: 'pointer',
           minWidth: 550,
         }}
         onClick={handleClick}
@@ -82,8 +102,8 @@ function Timeline({ bookings, userId, selectedStart, selectedEnd, onSlotClick, o
           <div
             style={{
               position: 'absolute',
-              left: `${((new Date(selectedStart).getUTCHours() + new Date(selectedStart).getUTCMinutes()/60 - openH) / totalH) * 100}%`,
-              width: `${((new Date(selectedEnd) - new Date(selectedStart)) / 3600000 / totalH) * 100}%`,
+              left: `${((parseInt(selectedStart.split(':')[0]) + parseInt(selectedStart.split(':')[1])/60 - openH) / totalH) * 100}%`,
+              width: `${((parseInt(selectedEnd.split(':')[0]) + parseInt(selectedEnd.split(':')[1])/60 - (parseInt(selectedStart.split(':')[0]) + parseInt(selectedStart.split(':')[1])/60)) / totalH) * 100}%`,
               top: '25%',
               height: '55%',
               background: 'rgba(212,175,55,0.35)',
@@ -159,23 +179,24 @@ export default function ResourceDetail() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
 
-  const today = new Date().toISOString().split('T')[0]
-  const [date, setDate] = useState(today)
+  const todayStr = new Date().toISOString().split('T')[0]
 
-  // Booking mode: 'single' (single session) or 'multi' (multi-day repeat)
+  // Booking mode: 'single' or 'multi'
   const [bookingMode, setBookingMode] = useState('single')
 
-  // Form states
+  // Form state with separate date & AM/PM time dropdowns
   const [form, setForm] = useState({
-    start_time: '',
-    end_time: '',
+    booking_date: todayStr,
+    start_time: '10:00',
+    end_time: '11:00',
     purpose: '',
-    // Multi-day specific fields:
-    start_date: today,
-    end_date: today,
-    daily_start_time: '17:00',
-    daily_end_time: '19:00',
+    // Multi-day fields
+    start_date: todayStr,
+    end_date: todayStr,
+    daily_start_time: '10:00',
+    daily_end_time: '11:00',
   })
+
   const [errors, setErrors] = useState({})
   const [clashInfo, setClashInfo] = useState(null)
 
@@ -197,10 +218,12 @@ export default function ResourceDetail() {
     fetchResource()
   }, [id, navigate])
 
+  const selectedDate = bookingMode === 'single' ? form.booking_date : form.start_date
+
   useEffect(() => {
     const fetchBookings = async () => {
       try {
-        const res = await client.get(`/api/resources/${id}/bookings`, { params: { date } })
+        const res = await client.get(`/api/resources/${id}/bookings`, { params: { date: selectedDate } })
         setBookings(res.data)
       } catch {
         setBookings([])
@@ -208,15 +231,15 @@ export default function ResourceDetail() {
         setLoading(false)
       }
     }
-    if (id) fetchBookings()
-  }, [id, date])
+    if (id && selectedDate) fetchBookings()
+  }, [id, selectedDate])
 
-  const handleSlotClick = (start, end) => {
-    const [, startTime] = start.split('T')
-    const [, endTime] = end.split('T')
-    set('start_time', `${date}T${startTime}`)
-    set('end_time', `${date}T${endTime}`)
+  const handleSlotClick = (startTime24, endTime24) => {
+    set('start_time', startTime24)
+    set('end_time', endTime24)
   }
+
+  const timeOptions = resource ? generateTimeOptions(resource.open_time, resource.close_time) : []
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -224,17 +247,26 @@ export default function ResourceDetail() {
 
     if (bookingMode === 'single') {
       const errs = {}
+      if (!form.booking_date) errs.booking_date = 'Select a date'
       if (!form.start_time) errs.start_time = 'Select a start time'
       if (!form.end_time) errs.end_time = 'Select an end time'
       if (!form.purpose.trim()) errs.purpose = 'Purpose is required'
+
+      if (form.start_time >= form.end_time) {
+        errs.end_time = 'End time must be after start time'
+      }
+
       if (Object.keys(errs).length) { setErrors(errs); return }
 
       setSubmitting(true)
       try {
+        const startISO = new Date(`${form.booking_date}T${form.start_time}:00`).toISOString()
+        const endISO = new Date(`${form.booking_date}T${form.end_time}:00`).toISOString()
+
         const res = await client.post('/api/bookings', {
           resource_id: parseInt(id),
-          start_time: new Date(form.start_time).toISOString(),
-          end_time: new Date(form.end_time).toISOString(),
+          start_time: startISO,
+          end_time: endISO,
           purpose: form.purpose,
         })
         addToast('Booking confirmed! 🎉', 'success')
@@ -245,13 +277,16 @@ export default function ResourceDetail() {
           setClashInfo(data?.detail?.clashing_slot)
           addToast(data?.detail?.message || 'Time slot is already booked', 'error')
         } else if (err.response?.status === 400) {
-          if (data?.detail?.errors) {
-            setErrors(data.detail.errors)
+          const detail = data?.detail
+          if (typeof detail === 'object') {
+            if (detail.errors) setErrors(detail.errors)
+            const firstErr = detail.message || (detail.errors ? Object.values(detail.errors)[0] : 'Validation error')
+            addToast(firstErr, 'error')
           } else {
-            addToast(data?.detail || 'Validation error', 'error')
+            addToast(typeof detail === 'string' ? detail : 'Validation error', 'error')
           }
         } else {
-          addToast('Something went wrong. Please try again.', 'error')
+          addToast(data?.detail || 'Failed to complete booking', 'error')
         }
       } finally {
         setSubmitting(false)
@@ -261,9 +296,13 @@ export default function ResourceDetail() {
       const errs = {}
       if (!form.start_date) errs.start_date = 'Select start date'
       if (!form.end_date) errs.end_date = 'Select end date'
-      if (!form.daily_start_time) errs.daily_start_time = 'Select daily start time'
-      if (!form.daily_end_time) errs.daily_end_time = 'Select daily end time'
+      if (!form.daily_start_time) errs.daily_start_time = 'Select start time'
+      if (!form.daily_end_time) errs.daily_end_time = 'Select end time'
       if (!form.purpose.trim()) errs.purpose = 'Purpose is required'
+
+      if (form.daily_start_time >= form.daily_end_time) {
+        errs.daily_end_time = 'End time must be after start time'
+      }
 
       const dStart = new Date(form.start_date)
       const dEnd = new Date(form.end_date)
@@ -271,7 +310,7 @@ export default function ResourceDetail() {
 
       if (Object.keys(errs).length) { setErrors(errs); return }
 
-      // Generate date array
+      // Generate dates list
       const dateList = []
       let cur = new Date(dStart)
       while (cur <= dEnd) {
@@ -286,7 +325,6 @@ export default function ResourceDetail() {
 
       setSubmitting(true)
       let createdBooking = null
-      let failedDate = null
 
       try {
         for (const dStr of dateList) {
@@ -297,20 +335,22 @@ export default function ResourceDetail() {
             resource_id: parseInt(id),
             start_time: sISO,
             end_time: eISO,
-            purpose: `${form.purpose} (Multi-Day Pass: ${dStr})`,
+            purpose: `${form.purpose} (${dStr})`,
           })
           if (!createdBooking) createdBooking = res.data
         }
 
-        addToast(`Successfully created ${dateList.length}-day booking! 🎉`, 'success')
+        addToast(`Created ${dateList.length}-day booking! 🎉`, 'success')
         navigate('/booking-success', { state: { booking: createdBooking, resource } })
       } catch (err) {
         const data = err.response?.data
         if (err.response?.status === 409) {
           setClashInfo(data?.detail?.clashing_slot)
-          addToast(`Slot clash detected! Could not complete full multi-day booking series.`, 'error')
+          addToast(`Slot clash detected! Could not complete all days.`, 'error')
         } else {
-          addToast(data?.detail || 'Validation or student limit error', 'error')
+          const detail = data?.detail
+          const msg = typeof detail === 'object' ? (detail.message || 'Validation error') : (detail || 'Booking failed')
+          addToast(msg, 'error')
         }
       } finally {
         setSubmitting(false)
@@ -342,7 +382,7 @@ export default function ResourceDetail() {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: 28, alignItems: 'start' }}>
 
-          {/* Left: Resource Info + Availability Timeline */}
+          {/* Left: Resource Info + Timeline */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
 
             {/* Resource Card */}
@@ -378,7 +418,7 @@ export default function ResourceDetail() {
               </div>
             </div>
 
-            {/* Availability Timeline */}
+            {/* Timeline */}
             <div className="card" style={{ padding: 24 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
                 <h2 style={{ fontSize: '1.0625rem', fontWeight: 700 }}>
@@ -388,9 +428,12 @@ export default function ResourceDetail() {
                   type="date"
                   className="form-input"
                   style={{ width: 'auto', colorScheme: 'dark' }}
-                  value={date}
-                  min={today}
-                  onChange={e => setDate(e.target.value)}
+                  value={selectedDate}
+                  min={todayStr}
+                  onChange={e => {
+                    if (bookingMode === 'single') set('booking_date', e.target.value)
+                    else set('start_date', e.target.value)
+                  }}
                 />
               </div>
               {loading
@@ -411,16 +454,16 @@ export default function ResourceDetail() {
               }
               {bookings.length === 0 && !loading && (
                 <p style={{ fontSize: '0.8125rem', color: 'var(--status-approved)', marginTop: 12, textAlign: 'center' }}>
-                  ✓ Fully available on {date}
+                  ✓ Fully available on {selectedDate}
                 </p>
               )}
             </div>
           </div>
 
-          {/* Right: Booking Form with Single / Multi-Day Mode */}
+          {/* Right: Easy Booking Form with Date + AM/PM Time Dropdowns */}
           <div className="card" style={{ padding: 24, position: 'sticky', top: 'calc(var(--navbar-h) + 20px)' }}>
 
-            {/* Mode Switcher Tabs */}
+            {/* Booking Mode Tabs */}
             <div className="filter-tabs" style={{ marginBottom: 20, width: '100%' }}>
               <button
                 type="button"
@@ -428,7 +471,7 @@ export default function ResourceDetail() {
                 style={{ flex: 1, textAlign: 'center' }}
                 onClick={() => setBookingMode('single')}
               >
-                Single Session
+                Single Day
               </button>
               <button
                 type="button"
@@ -436,12 +479,12 @@ export default function ResourceDetail() {
                 style={{ flex: 1, textAlign: 'center' }}
                 onClick={() => setBookingMode('multi')}
               >
-                Multi-Day Booking
+                Multi-Day
               </button>
             </div>
 
             <h2 style={{ fontSize: '1.0625rem', fontWeight: 700, marginBottom: 16 }}>
-              {bookingMode === 'single' ? 'Single Booking Form' : 'Multi-Day Recurring Schedule'}
+              {bookingMode === 'single' ? 'Reserve a Time Slot' : 'Multi-Day Recurring Schedule'}
             </h2>
 
             {clashInfo && (
@@ -460,35 +503,54 @@ export default function ResourceDetail() {
 
               {bookingMode === 'single' ? (
                 <>
+                  {/* Date Input */}
                   <div className="form-group">
-                    <label className="form-label">Start Date &amp; Time</label>
+                    <label className="form-label">Booking Date</label>
                     <input
-                      type="datetime-local"
-                      className={`form-input ${errors.start_time ? 'error' : ''}`}
-                      value={form.start_time}
-                      min={`${today}T00:00`}
-                      onChange={e => set('start_time', e.target.value)}
+                      type="date"
+                      className={`form-input ${errors.booking_date ? 'error' : ''}`}
+                      value={form.booking_date}
+                      min={todayStr}
+                      onChange={e => set('booking_date', e.target.value)}
                       style={{ colorScheme: 'dark' }}
                     />
-                    {errors.start_time && <div className="form-error">⚠ {errors.start_time}</div>}
+                    {errors.booking_date && <div className="form-error">⚠ {errors.booking_date}</div>}
                   </div>
 
-                  <div className="form-group">
-                    <label className="form-label">End Date &amp; Time</label>
-                    <input
-                      type="datetime-local"
-                      className={`form-input ${errors.end_time ? 'error' : ''}`}
-                      value={form.end_time}
-                      min={form.start_time || `${today}T00:00`}
-                      onChange={e => set('end_time', e.target.value)}
-                      style={{ colorScheme: 'dark' }}
-                    />
-                    {errors.end_time && <div className="form-error">⚠ {errors.end_time}</div>}
+                  {/* 12-Hour AM/PM Time Dropdowns */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <div className="form-group">
+                      <label className="form-label">Start Time</label>
+                      <select
+                        className={`form-select ${errors.start_time ? 'error' : ''}`}
+                        value={form.start_time}
+                        onChange={e => set('start_time', e.target.value)}
+                      >
+                        {timeOptions.map(t => (
+                          <option key={t.value} value={t.value}>{t.label}</option>
+                        ))}
+                      </select>
+                      {errors.start_time && <div className="form-error">⚠ {errors.start_time}</div>}
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">End Time</label>
+                      <select
+                        className={`form-select ${errors.end_time ? 'error' : ''}`}
+                        value={form.end_time}
+                        onChange={e => set('end_time', e.target.value)}
+                      >
+                        {timeOptions.map(t => (
+                          <option key={t.value} value={t.value}>{t.label}</option>
+                        ))}
+                      </select>
+                      {errors.end_time && <div className="form-error">⚠ {errors.end_time}</div>}
+                    </div>
                   </div>
                 </>
               ) : (
                 <>
-                  {/* Multi-Day Booking Mode: Date Range + Time Per Day */}
+                  {/* Multi-Day Mode */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                     <div className="form-group">
                       <label className="form-label">Start Date</label>
@@ -496,7 +558,7 @@ export default function ResourceDetail() {
                         type="date"
                         className={`form-input ${errors.start_date ? 'error' : ''}`}
                         value={form.start_date}
-                        min={today}
+                        min={todayStr}
                         onChange={e => set('start_date', e.target.value)}
                         style={{ colorScheme: 'dark' }}
                       />
@@ -509,7 +571,7 @@ export default function ResourceDetail() {
                         type="date"
                         className={`form-input ${errors.end_date ? 'error' : ''}`}
                         value={form.end_date}
-                        min={form.start_date || today}
+                        min={form.start_date || todayStr}
                         onChange={e => set('end_date', e.target.value)}
                         style={{ colorScheme: 'dark' }}
                       />
@@ -519,40 +581,45 @@ export default function ResourceDetail() {
 
                   <div style={{ background: 'var(--bg-elevated)', padding: 14, borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
                     <p style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--gold)', marginBottom: 10 }}>
-                      ⏰ Daily Time Window (Applies to Each Day)
+                      ⏰ Daily Time Window (Applies Each Day)
                     </p>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                       <div className="form-group">
                         <label className="form-label">Daily Start</label>
-                        <input
-                          type="time"
-                          className="form-input"
+                        <select
+                          className="form-select"
                           value={form.daily_start_time}
                           onChange={e => set('daily_start_time', e.target.value)}
-                          style={{ colorScheme: 'dark' }}
-                        />
+                        >
+                          {timeOptions.map(t => (
+                            <option key={t.value} value={t.value}>{t.label}</option>
+                          ))}
+                        </select>
                       </div>
 
                       <div className="form-group">
                         <label className="form-label">Daily End</label>
-                        <input
-                          type="time"
-                          className="form-input"
+                        <select
+                          className="form-select"
                           value={form.daily_end_time}
                           onChange={e => set('daily_end_time', e.target.value)}
-                          style={{ colorScheme: 'dark' }}
-                        />
+                        >
+                          {timeOptions.map(t => (
+                            <option key={t.value} value={t.value}>{t.label}</option>
+                          ))}
+                        </select>
                       </div>
                     </div>
                   </div>
                 </>
               )}
 
+              {/* Purpose */}
               <div className="form-group">
                 <label className="form-label">Purpose / Event Details</label>
                 <textarea
                   className={`form-textarea ${errors.purpose ? 'error' : ''}`}
-                  placeholder="e.g. LNMIIT Hackathon Practice, Society Event..."
+                  placeholder="Describe purpose of booking (e.g., Club Meeting, Practice)..."
                   value={form.purpose}
                   onChange={e => set('purpose', e.target.value)}
                   rows={3}
@@ -561,20 +628,22 @@ export default function ResourceDetail() {
               </div>
 
               {/* Duration Preview */}
-              {bookingMode === 'single' && form.start_time && form.end_time && (
+              {form.start_time && form.end_time && (
                 <div style={{
                   background: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)',
-                  padding: '10px 14px', fontSize: '0.8125rem', color: 'var(--text-muted)'
+                  padding: '10px 14px', fontSize: '0.8125rem', color: 'var(--text-muted)',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center'
                 }}>
-                  Duration: <strong style={{ color: 'var(--text-primary)' }}>
-                    {Math.round((new Date(form.end_time) - new Date(form.start_time)) / 60000)} minutes
+                  <span>Selected Window:</span>
+                  <strong style={{ color: 'var(--gold)' }}>
+                    {formatTime12(form.start_time)} – {formatTime12(form.end_time)}
                   </strong>
                 </div>
               )}
 
               <button type="submit" className="btn btn-primary btn-lg w-full" disabled={submitting}>
                 {submitting ? <><div className="spinner" /> Submitting...</> : (
-                  bookingMode === 'single' ? 'Confirm Booking →' : 'Confirm Multi-Day Bookings →'
+                  bookingMode === 'single' ? 'Confirm Booking →' : 'Confirm Multi-Day Booking →'
                 )}
               </button>
             </form>
