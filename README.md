@@ -7,7 +7,7 @@ An enterprise-grade campus resource management and automated booking platform bu
 ## 🌐 Live Production Deployments
 
 - 🚀 **Live Web Application (Vercel)**: [https://gdg-clg-proj-1.vercel.app](https://gdg-clg-proj-1.vercel.app)
-- ⚡ **Backend REST API & OpenAPI Docs (Render)**: [https://lnmiit-booking-backend.onrender.com/docs](https://lnmiit-booking-backend.onrender.com/docs)
+- ⚡ **Backend REST API & OpenAPI Docs (Render)**: [https://lnmiit-booking-backend-430o.onrender.com/docs](https://lnmiit-booking-backend-430o.onrender.com/docs)
 - ⏱️ **Automated Production Cron Status**: `Active 🟢` (APScheduler & Keep-Alive Ping)
 
 ---
