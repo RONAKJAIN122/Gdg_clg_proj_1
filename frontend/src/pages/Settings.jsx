@@ -23,6 +23,7 @@ export default function Settings() {
     setTimeout(() => {
       // Save locally
       const updatedUser = { ...user, name }
+      sessionStorage.setItem('user', JSON.stringify(updatedUser))
       localStorage.setItem('user', JSON.stringify(updatedUser))
       addToast('Profile settings saved successfully', 'success')
       setSaving(false)
