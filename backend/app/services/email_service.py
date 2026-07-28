@@ -17,7 +17,7 @@ ETHEREAL_INBOX = "https://ethereal.email/messages"
 
 
 async def _send_email(to: str, subject: str, html_body: str) -> None:
-    """Send an email via Ethereal SMTP (STARTTLS on port 587)."""
+    """Send an email via SMTP (STARTTLS on port 587)."""
     msg = MIMEMultipart("alternative")
     msg["From"] = settings.EMAIL_FROM
     msg["To"] = to
@@ -30,7 +30,6 @@ async def _send_email(to: str, subject: str, html_body: str) -> None:
         return
 
     try:
-        # Ethereal uses port 587 with STARTTLS (not SSL)
         await aiosmtplib.send(
             msg,
             hostname=settings.SMTP_HOST,
@@ -40,16 +39,16 @@ async def _send_email(to: str, subject: str, html_body: str) -> None:
             use_tls=False,      # Do NOT wrap socket in SSL
             start_tls=True,     # Use STARTTLS upgrade after connect
         )
-        logger.info(f"[EMAIL OK] Sent to {to} | View inbox: {ETHEREAL_INBOX}")
-        print(f"\n[EMAIL SENT] To={to} | View: {ETHEREAL_INBOX}\n")
+        logger.info(f"[EMAIL OK] Sent real email to {to}")
+        print(f"\n[EMAIL SENT] Sent real email to {to} from {settings.EMAIL_FROM}\n")
     except Exception as e:
         logger.error(f"Email send failed ({type(e).__name__}): {e}")
         logger.info(f"[EMAIL FALLBACK] Could not deliver to {to}")
 
 
 async def send_otp_email(to: str, name: str, otp: str) -> None:
-    print(f"\n🔑 [OTP CODE GENERATED] For Email: {to} | OTP: {otp}\n")
-    logger.info(f"🔑 [OTP CODE GENERATED] For Email: {to} | OTP: {otp}")
+    print(f"\n[OTP CODE GENERATED] For Email: {to} | OTP: {otp}\n")
+    logger.info(f"[OTP CODE GENERATED] For Email: {to} | OTP: {otp}")
     subject = "CampusDesk — Your Login OTP"
     html = f"""
     <div style="font-family: Inter, -apple-system, sans-serif; max-width: 480px; margin: 0 auto; background: #0F1115; color: #F4F4F4; border-radius: 16px; overflow: hidden;">
@@ -75,8 +74,8 @@ async def send_otp_email(to: str, name: str, otp: str) -> None:
     """
     # Always print OTP to console as a fallback
     print(f"\n{'='*50}")
-    print(f"  [OTP]  {to}  ->  {otp}")
-    print(f"  View inbox: {ETHEREAL_INBOX}")
+    print(f"  [OTP GENERATED]  {to}  ->  {otp}")
+    print(f"  Delivering via Gmail SMTP ({settings.EMAIL_FROM})")
     print(f"{'='*50}\n")
     await _send_email(to, subject, html)
 
