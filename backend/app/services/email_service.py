@@ -1,9 +1,8 @@
 """
-Email service — sends real emails via Gmail.
+Email service — sends real emails.
 Strategy:
-  1. Try aiosmtplib STARTTLS on port 587 (works locally)
-  2. Try aiosmtplib SSL on port 465 (may work on some hosts)
-  3. Fall back to synchronous smtplib in a thread (most compatible)
+  - If RESEND_API_KEY is set → use Resend HTTP API (works on Render, port 443)
+  - Otherwise → use Gmail SMTP (works locally)
 """
 import asyncio
 import logging
@@ -13,12 +12,16 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from functools import partial
 
+import httpx
+
 from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Diagnostic: print SMTP config on startup so we can verify in Render logs
-print(f"[EMAIL CONFIG] SMTP_HOST={settings.SMTP_HOST} SMTP_PORT={settings.SMTP_PORT} SMTP_USER={settings.SMTP_USER} EMAIL_FROM={settings.EMAIL_FROM} SMTP_PASS={'***' + settings.SMTP_PASS[-4:] if settings.SMTP_PASS else 'EMPTY'}")
+# Diagnostic: print email config on startup
+_smtp_info = f"SMTP_HOST={settings.SMTP_HOST} SMTP_USER={settings.SMTP_USER}"
+_resend_info = f"RESEND_API_KEY={'***' + settings.RESEND_API_KEY[-6:] if settings.RESEND_API_KEY else 'NOT SET'}"
+print(f"[EMAIL CONFIG] {_smtp_info} | {_resend_info} | EMAIL_FROM={settings.EMAIL_FROM}")
 
 
 def _build_message(to: str, subject: str, html_body: str) -> MIMEMultipart:
@@ -30,14 +33,37 @@ def _build_message(to: str, subject: str, html_body: str) -> MIMEMultipart:
     return msg
 
 
-def _send_email_sync(msg: MIMEMultipart, to: str) -> None:
+async def _send_via_brevo(to: str, subject: str, html_body: str) -> None:
+    """Send email via Brevo REST API (works on any cloud host over HTTPS)."""
+    async with httpx.AsyncClient(timeout=15) as client:
+        resp = await client.post(
+            "https://api.brevo.com/v3/smtp/email",
+            headers={
+                "api-key": settings.BREVO_API_KEY,
+                "Content-Type": "application/json",
+            },
+            json={
+                "sender": {"name": "CampusDesk", "email": settings.EMAIL_FROM or "campusdesk@lnmiit.ac.in"},
+                "to": [{"email": to}],
+                "subject": subject,
+                "htmlContent": html_body,
+            },
+        )
+        if resp.status_code in (200, 201):
+            print(f"[EMAIL SENT via Brevo HTTP API] to {to}")
+        else:
+            print(f"[EMAIL ERROR] Brevo API returned {resp.status_code}: {resp.text}")
+            resp.raise_for_status()
+
+
+def _send_via_smtp_sync(msg: MIMEMultipart, to: str) -> None:
     """Synchronous email send via smtplib — runs in a thread pool.
     Tries port 465 (SSL) first, then port 587 (STARTTLS)."""
-    
+
     # Strategy 1: Port 465 with implicit SSL
     try:
         print(f"[EMAIL] Trying SSL port 465...")
-        with smtplib.SMTP_SSL(settings.SMTP_HOST, 465, timeout=30) as server:
+        with smtplib.SMTP_SSL(settings.SMTP_HOST, 465, timeout=8) as server:
             server.login(settings.SMTP_USER, settings.SMTP_PASS)
             server.send_message(msg)
         print(f"[EMAIL SENT via SSL:465] to {to}")
@@ -48,7 +74,7 @@ def _send_email_sync(msg: MIMEMultipart, to: str) -> None:
     # Strategy 2: Port 587 with STARTTLS
     try:
         print(f"[EMAIL] Trying STARTTLS port 587...")
-        with smtplib.SMTP(settings.SMTP_HOST, 587, timeout=30) as server:
+        with smtplib.SMTP(settings.SMTP_HOST, 587, timeout=8) as server:
             server.ehlo()
             server.starttls()
             server.ehlo()
@@ -59,22 +85,28 @@ def _send_email_sync(msg: MIMEMultipart, to: str) -> None:
     except Exception as e:
         print(f"[EMAIL] STARTTLS:587 failed: {type(e).__name__}: {e}")
 
-    print(f"[EMAIL ERROR] All strategies failed for {to}")
-    raise RuntimeError(f"Could not send email to {to} via any SMTP strategy")
+    print(f"[EMAIL ERROR] All SMTP strategies failed for {to}")
+    raise RuntimeError(f"Could not send email to {to} via any SMTP strategy (ports 465 & 587 blocked or timed out)")
 
 
 async def _send_email(to: str, subject: str, html_body: str) -> None:
-    """Send an email — uses thread pool for maximum compatibility."""
-    if not settings.SMTP_USER:
-        logger.warning(f"[EMAIL - NO SMTP] To={to} | Subject={subject}")
+    """Send email — auto-selects Resend HTTP API, Brevo HTTP API, or Gmail SMTP."""
+    if not settings.SMTP_USER and not settings.RESEND_API_KEY and not settings.BREVO_API_KEY:
+        logger.warning(f"[EMAIL - NO CONFIG] To={to} | Subject={subject}")
         return
 
-    msg = _build_message(to, subject, html_body)
-
     try:
-        # Run synchronous smtplib in a thread to avoid blocking the event loop
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, partial(_send_email_sync, msg, to))
+        if settings.RESEND_API_KEY:
+            # Use Resend HTTP API (works on Render / any cloud)
+            await _send_via_resend(to, subject, html_body)
+        elif settings.BREVO_API_KEY:
+            # Use Brevo HTTP API (works on Render / any cloud)
+            await _send_via_brevo(to, subject, html_body)
+        elif settings.SMTP_USER:
+            # Use Gmail SMTP (works locally)
+            msg = _build_message(to, subject, html_body)
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, partial(_send_via_smtp_sync, msg, to))
         logger.info(f"[EMAIL OK] Sent real email to {to}")
     except Exception as e:
         print(f"\n[EMAIL ERROR] Failed to send to {to}: {type(e).__name__}: {e}")
@@ -108,10 +140,8 @@ async def send_otp_email(to: str, name: str, otp: str) -> None:
       </div>
     </div>
     """
-    # Always print OTP to console as a fallback
     print(f"\n{'='*50}")
     print(f"  [OTP GENERATED]  {to}  ->  {otp}")
-    print(f"  Delivering via Gmail SMTP ({settings.EMAIL_FROM})")
     print(f"{'='*50}\n")
     await _send_email(to, subject, html)
 

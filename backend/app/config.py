@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     SMTP_USER: str = ""
     SMTP_PASS: str = ""
     EMAIL_FROM: str = "campusdesk@lnmiit.ac.in"
+    RESEND_API_KEY: str = ""
+    BREVO_API_KEY: str = ""
 
     APP_ENV: str = "development"
     FRONTEND_URL: str = "http://localhost:5173"
