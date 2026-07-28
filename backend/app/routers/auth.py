@@ -19,8 +19,9 @@ async def send_otp(payload: SendOTPRequest, db: AsyncSession = Depends(get_db)):
         except ValueError as e:
             raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=str(e))
 
-    # Send email outside transaction
-    await email_service.send_otp_email(payload.email, payload.name, code)
+    # Send email in the background so the API response returns instantly
+    import asyncio
+    asyncio.create_task(email_service.send_otp_email(payload.email, payload.name, code))
     return {"message": "OTP sent to your email"}
 
 

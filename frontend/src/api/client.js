@@ -5,7 +5,7 @@ const BACKEND_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BAS
 const client = axios.create({
   baseURL: BACKEND_URL,
   headers: { 'Content-Type': 'application/json' },
-  timeout: 15000,
+  timeout: 60000,   // 60s — Render free tier cold starts can take 30-50s
 })
 
 // Attach JWT on every request

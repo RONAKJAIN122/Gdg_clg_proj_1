@@ -52,13 +52,17 @@ export default function Login() {
       addToast('OTP sent! Check your email (or server console in dev)', 'success')
       setTimeout(() => otpRefs.current[0]?.focus(), 100)
     } catch (err) {
-      const msg = typeof err.response?.data?.detail === 'string' 
-        ? err.response.data.detail 
-        : (Array.isArray(err.response?.data?.detail) ? err.response.data.detail[0]?.msg : null)
-      if (err.response?.status === 429) {
-        setError(msg || 'Too many requests. Please wait 10 minutes before trying again.')
+      if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
+        setError('Server is waking up (free tier). Please try again in 10 seconds.')
       } else {
-        setError(msg || 'Failed to send OTP. Please try again.')
+        const msg = typeof err.response?.data?.detail === 'string' 
+          ? err.response.data.detail 
+          : (Array.isArray(err.response?.data?.detail) ? err.response.data.detail[0]?.msg : null)
+        if (err.response?.status === 429) {
+          setError(msg || 'Too many requests. Please wait 10 minutes before trying again.')
+        } else {
+          setError(msg || 'Failed to send OTP. Please try again.')
+        }
       }
     } finally {
       setLoading(false)
