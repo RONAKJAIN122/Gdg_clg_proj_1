@@ -48,6 +48,8 @@ async def _send_email(to: str, subject: str, html_body: str) -> None:
 
 
 async def send_otp_email(to: str, name: str, otp: str) -> None:
+    print(f"\n🔑 [OTP CODE GENERATED] For Email: {to} | OTP: {otp}\n")
+    logger.info(f"🔑 [OTP CODE GENERATED] For Email: {to} | OTP: {otp}")
     subject = "CampusDesk — Your Login OTP"
     html = f"""
     <div style="font-family: Inter, -apple-system, sans-serif; max-width: 480px; margin: 0 auto; background: #0F1115; color: #F4F4F4; border-radius: 16px; overflow: hidden;">
