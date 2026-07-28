@@ -31,16 +31,19 @@ async def my_bookings(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    query = (
-        select(Booking)
-        .where(Booking.user_id == user.id)
-        .order_by(Booking.start_time.desc())
-    )
+    query = select(Booking).where(Booking.user_id == user.id)
     count_query = select(func.count(Booking.id)).where(Booking.user_id == user.id)
 
     if status_filter:
         query = query.where(Booking.status == status_filter)
         count_query = count_query.where(Booking.status == status_filter)
+    else:
+        # Exclude cancelled bookings by default
+        query = query.where(Booking.status != BookingStatus.cancelled)
+        count_query = count_query.where(Booking.status != BookingStatus.cancelled)
+
+    # Order date-wise (newest/upcoming date first)
+    query = query.order_by(Booking.start_time.desc())
 
     total = (await db.execute(count_query)).scalar_one()
     bookings = (

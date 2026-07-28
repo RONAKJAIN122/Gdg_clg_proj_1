@@ -12,6 +12,7 @@ import ResourceDetail from './pages/ResourceDetail'
 import MyBookings from './pages/MyBookings'
 import BookingSuccess from './pages/BookingSuccess'
 import Dashboard from './pages/Dashboard'
+import Settings from './pages/Settings'
 import Admin from './pages/Admin'
 
 // Booking category pages (share a layout, different config)
@@ -64,7 +65,7 @@ export default function App() {
                 <ProtectedRoute><Dashboard /></ProtectedRoute>
               } />
               <Route path="/settings" element={
-                <ProtectedRoute><Dashboard /></ProtectedRoute>
+                <ProtectedRoute><Settings /></ProtectedRoute>
               } />
 
               {/* Admin */}

@@ -12,9 +12,9 @@ const BOOKING_ITEMS = [
 ]
 
 const USER_MENU_ITEMS = [
-  { label: 'Dashboard',   icon: '⊞',  path: '/dashboard' },
+  { label: 'Dashboard',   icon: '📊', path: '/dashboard' },
   { label: 'My Bookings', icon: '📅', path: '/my-bookings' },
-  { label: 'Settings',    icon: '⚙',  path: '/settings' },
+  { label: 'Settings',    icon: '⚙️', path: '/settings' },
 ]
 
 export default function Navbar() {
@@ -29,6 +29,28 @@ export default function Navbar() {
 
   const bookingRef = useRef()
   const userRef = useRef()
+  const bookingTimeoutRef = useRef()
+  const userTimeoutRef = useRef()
+
+  const handleBookingEnter = () => {
+    if (bookingTimeoutRef.current) clearTimeout(bookingTimeoutRef.current)
+    setBookingOpen(true)
+  }
+  const handleBookingLeave = () => {
+    bookingTimeoutRef.current = setTimeout(() => {
+      setBookingOpen(false)
+    }, 180)
+  }
+
+  const handleUserEnter = () => {
+    if (userTimeoutRef.current) clearTimeout(userTimeoutRef.current)
+    setUserMenuOpen(true)
+  }
+  const handleUserLeave = () => {
+    userTimeoutRef.current = setTimeout(() => {
+      setUserMenuOpen(false)
+    }, 180)
+  }
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -98,7 +120,12 @@ export default function Navbar() {
           </li>
 
           {/* Make a Booking Dropdown */}
-          <li className="nav-dropdown" ref={bookingRef}>
+          <li
+            className="nav-dropdown"
+            ref={bookingRef}
+            onMouseEnter={handleBookingEnter}
+            onMouseLeave={handleBookingLeave}
+          >
             <button
               className={`nav-link ${location.pathname.startsWith('/book') ? 'active' : ''}`}
               onClick={() => setBookingOpen(o => !o)}
@@ -154,7 +181,12 @@ export default function Navbar() {
           {isLoggedIn ? (
             <>
               {/* User Avatar */}
-              <div className="user-menu" ref={userRef}>
+              <div
+                className="user-menu"
+                ref={userRef}
+                onMouseEnter={handleUserEnter}
+                onMouseLeave={handleUserLeave}
+              >
                 <div className="user-avatar" onClick={() => setUserMenuOpen(o => !o)} title={user.name}>
                   {initials}
                 </div>
@@ -179,7 +211,7 @@ export default function Navbar() {
                     )}
                     <div className="divider" style={{ margin: '8px 0' }} />
                     <button className="user-dropdown-item danger" onClick={handleLogout}>
-                      <span>⇥</span>
+                      <span>🚪</span>
                       Sign Out
                     </button>
                     </div>

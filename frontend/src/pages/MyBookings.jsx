@@ -5,10 +5,9 @@ import { useToast } from '../context/ToastContext'
 import client from '../api/client'
 
 const TABS = [
-  { value: '',           label: 'All' },
-  { value: 'confirmed',  label: 'Confirmed' },
-  { value: 'completed',  label: 'Completed' },
-  { value: 'cancelled',  label: 'Cancelled' },
+  { value: 'ongoing',  label: 'Ongoing 🟢' },
+  { value: 'upcoming', label: 'Upcoming 📅' },
+  { value: 'history',  label: 'History 📜' },
 ]
 
 // Format naive datetime string from API (no Z) — parse as local for correct display
@@ -29,38 +28,52 @@ export default function MyBookings() {
   const { addToast } = useToast()
   const navigate = useNavigate()
 
-  const [activeTab, setActiveTab] = useState('')
+  const [activeTab, setActiveTab] = useState('upcoming')
   const [bookings, setBookings] = useState([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
+  const [selectedBooking, setSelectedBooking] = useState(null)
   const LIMIT = 10
 
   const fetchBookings = useCallback(async () => {
     setLoading(true)
     try {
-      const params = { page, limit: LIMIT }
-      if (activeTab) params.status = activeTab
-      const res = await client.get('/api/bookings/me', { params })
-      setBookings(res.data.data)
-      setTotal(res.data.total)
+      const res = await client.get('/api/bookings/me', { params: { page: 1, limit: 100 } })
+      const now = new Date()
+      
+      // Filter out cancelled bookings
+      let list = (res.data.data || []).filter(b => b.status !== 'cancelled')
+      
+      if (activeTab === 'ongoing') {
+        // Ongoing: currently active right now (start_time <= now && end_time >= now)
+        list = list.filter(b => b.status === 'confirmed' && new Date(b.start_time) <= now && new Date(b.end_time) >= now)
+      } else if (activeTab === 'upcoming') {
+        // Upcoming: future confirmed events (start_time > now)
+        list = list.filter(b => b.status === 'confirmed' && new Date(b.start_time) > now)
+      } else if (activeTab === 'history') {
+        // History: past events or completed events (end_time < now || status === completed)
+        list = list.filter(b => b.status === 'completed' || new Date(b.end_time) < now)
+      }
+      
+      list.sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime())
+      
+      setBookings(list)
+      setTotal(list.length)
     } catch { setBookings([]) }
     finally { setLoading(false) }
-  }, [page, activeTab])
+  }, [activeTab])
 
   useEffect(() => { fetchBookings() }, [fetchBookings])
 
   const handleCancel = async (bookingId) => {
-    // Optimistic update
-    setBookings(prev =>
-      prev.map(b => b.id === bookingId ? { ...b, status: 'cancelled' } : b)
-    )
+    // Optimistically remove cancelled booking from screen
+    setBookings(prev => prev.filter(b => b.id !== bookingId))
     try {
       await client.patch(`/api/bookings/${bookingId}/cancel`)
-      addToast('Booking cancelled', 'success')
+      addToast('Booking cancelled & removed from list', 'success')
       fetchBookings()
     } catch (err) {
-      // Rollback
       fetchBookings()
       addToast(err.response?.data?.detail || 'Failed to cancel booking', 'error')
     }
@@ -71,6 +84,17 @@ export default function MyBookings() {
     // API returns naive string (no Z). new Date() parses it as local — compare with local now
     const startTime = new Date(b.start_time)
     return startTime > new Date()
+  }
+
+  const getStatusBadge = (b) => {
+    const now = new Date()
+    if (b.status === 'confirmed' && new Date(b.start_time) <= now && new Date(b.end_time) >= now) {
+      return <span className="badge" style={{ background: '#16a34a', color: '#fff', fontWeight: 700 }}>● ONGOING</span>
+    }
+    if (b.status === 'confirmed' && new Date(b.start_time) > now) {
+      return <span className="badge badge-confirmed">UPCOMING</span>
+    }
+    return <span className="badge badge-completed">COMPLETED</span>
   }
 
   const totalPages = Math.ceil(total / LIMIT)
@@ -113,11 +137,15 @@ export default function MyBookings() {
         ) : bookings.length === 0 ? (
           <div className="empty-state">
             <div className="empty-icon">📅</div>
-            <h3>No bookings found</h3>
+            <h3>
+              {activeTab === 'ongoing' ? 'No ongoing bookings right now' :
+               activeTab === 'upcoming' ? 'No upcoming bookings scheduled' :
+               'No past booking history'}
+            </h3>
             <p style={{ marginBottom: 24 }}>
-              {activeTab
-                ? `No ${activeTab} bookings`
-                : "You haven't made any bookings yet"}
+              {activeTab === 'ongoing' ? 'Active events currently taking place will show up here' :
+               activeTab === 'upcoming' ? 'Reservations scheduled for future dates will appear here' :
+               'Completed and past reservations will be stored here'}
             </p>
             <button className="btn btn-primary" onClick={() => navigate('/resources')}>
               Browse Resources
@@ -154,7 +182,7 @@ export default function MyBookings() {
                 </div>
 
                 <div className="booking-item-actions">
-                  <span className={`badge badge-${b.status}`}>{b.status}</span>
+                  {getStatusBadge(b)}
                   {canCancel(b) && (
                     <button
                       className="btn btn-secondary btn-sm"
@@ -166,9 +194,9 @@ export default function MyBookings() {
                   )}
                   <button
                     className="btn btn-ghost btn-sm"
-                    onClick={() => navigate(`/resources/${b.resource_id}`)}
+                    onClick={() => setSelectedBooking(b)}
                   >
-                    View →
+                    View Details →
                   </button>
                 </div>
               </div>
@@ -184,6 +212,152 @@ export default function MyBookings() {
               <button key={p} className={`page-btn ${p === page ? 'active' : ''}`} onClick={() => setPage(p)}>{p}</button>
             ))}
             <button className="page-btn" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>→</button>
+          </div>
+        )}
+
+        {/* Booking Details Modal */}
+        {selectedBooking && (
+          <div style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: 20
+          }} onClick={() => setSelectedBooking(null)}>
+            <div className="card" style={{
+              width: '100%',
+              maxWidth: 520,
+              padding: 28,
+              borderRadius: 'var(--radius-lg)',
+              boxShadow: 'var(--shadow-lg)',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              position: 'relative'
+            }} onClick={e => e.stopPropagation()}>
+              
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+                <div>
+                  <span className={`badge badge-${selectedBooking.status}`} style={{ marginBottom: 8, display: 'inline-block' }}>
+                    {selectedBooking.status.toUpperCase()}
+                  </span>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+                    Booking #{selectedBooking.id} Details
+                  </h2>
+                </div>
+                <button
+                  onClick={() => setSelectedBooking(null)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    fontSize: '1.5rem',
+                    cursor: 'pointer',
+                    color: 'var(--text-muted)',
+                    padding: '0 4px',
+                    lineHeight: 1
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Details Content */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div style={{
+                  padding: 14,
+                  borderRadius: 'var(--radius)',
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 14
+                }}>
+                  <div style={{
+                    width: 44, height: 44,
+                    borderRadius: 10,
+                    background: 'var(--maroon-dim)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '1.25rem'
+                  }}>
+                    {selectedBooking.resource?.category === 'hall' ? '🏛️' :
+                     selectedBooking.resource?.category === 'equipment' ? '📷' :
+                     selectedBooking.resource?.category === 'room' ? '🚪' : '📋'}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>
+                      {selectedBooking.resource?.name || `Resource #${selectedBooking.resource_id}`}
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      Category: {selectedBooking.resource?.category?.toUpperCase() || 'GENERAL'} {selectedBooking.resource?.location ? `• ${selectedBooking.resource.location}` : ''}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div style={{ padding: 12, borderRadius: 'var(--radius)', background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: 4 }}>
+                      START TIME
+                    </div>
+                    <div style={{ fontWeight: 700, fontSize: '0.875rem' }}>
+                      {fmtDT(selectedBooking.start_time)}
+                    </div>
+                  </div>
+                  <div style={{ padding: 12, borderRadius: 'var(--radius)', background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: 4 }}>
+                      END TIME
+                    </div>
+                    <div style={{ fontWeight: 700, fontSize: '0.875rem' }}>
+                      {fmtDT(selectedBooking.end_time)}
+                    </div>
+                  </div>
+                </div>
+
+                {selectedBooking.purpose && (
+                  <div style={{ padding: 12, borderRadius: 'var(--radius)', background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: 4 }}>
+                      PURPOSE / REASON
+                    </div>
+                    <div style={{ fontSize: '0.875rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                      {selectedBooking.purpose}
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ padding: 12, borderRadius: 'var(--radius)', background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: 4 }}>
+                    RESERVED BY
+                  </div>
+                  <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>
+                    {user?.name} ({user?.email})
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Actions */}
+              <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                {canCancel(selectedBooking) && (
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      const id = selectedBooking.id
+                      setSelectedBooking(null)
+                      handleCancel(id)
+                    }}
+                    style={{ borderColor: 'rgba(220,38,38,0.3)', color: '#f87171' }}
+                  >
+                    Cancel Booking
+                  </button>
+                )}
+                <button className="btn btn-primary" onClick={() => setSelectedBooking(null)}>
+                  Close
+                </button>
+              </div>
+
+            </div>
           </div>
         )}
 

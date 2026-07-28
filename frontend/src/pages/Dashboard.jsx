@@ -34,10 +34,23 @@ export default function Dashboard() {
   }, [])
 
   const now = new Date()
-  const upcoming = bookings.filter(b => b.status === 'confirmed' && new Date(b.start_time) > now)
-  const completed = bookings.filter(b => b.status === 'completed')
-  const cancelled = bookings.filter(b => b.status === 'cancelled')
-  const recent = [...bookings].slice(0, 5)
+  const activeBookings = bookings.filter(b => b.status !== 'cancelled')
+
+  const ongoing = activeBookings.filter(b => b.status === 'confirmed' && new Date(b.start_time) <= now && new Date(b.end_time) >= now)
+  const upcoming = activeBookings.filter(b => b.status === 'confirmed' && new Date(b.start_time) > now)
+  const history = activeBookings.filter(b => b.status === 'completed' || new Date(b.end_time) < now)
+
+  const recent = [...activeBookings].sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime()).slice(0, 5)
+
+  const getStatusBadge = (b) => {
+    if (b.status === 'confirmed' && new Date(b.start_time) <= now && new Date(b.end_time) >= now) {
+      return <span className="badge" style={{ background: '#16a34a', color: '#fff', fontWeight: 700 }}>● ONGOING</span>
+    }
+    if (b.status === 'confirmed' && new Date(b.start_time) > now) {
+      return <span className="badge badge-confirmed">UPCOMING</span>
+    }
+    return <span className="badge badge-completed">COMPLETED</span>
+  }
 
   const fmt = (dt) => new Date(dt).toLocaleString('en-IN', {
     day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true
@@ -57,10 +70,10 @@ export default function Dashboard() {
 
         {/* Stats */}
         <div className="dashboard-grid stagger">
-          <DashCard icon="📅" count={upcoming.length} label="Upcoming Bookings" color="var(--gold)" />
-          <DashCard icon="⏳" count={bookings.filter(b => b.status === 'confirmed').length} label="Confirmed" color="var(--status-approved)" />
-          <DashCard icon="✓" count={completed.length} label="Completed" color="#60a5fa" />
-          <DashCard icon="✕" count={cancelled.length} label="Cancelled" color="var(--status-rejected)" />
+          <DashCard icon="🟢" count={ongoing.length} label="Ongoing" color="#16a34a" />
+          <DashCard icon="📅" count={upcoming.length} label="Upcoming" color="var(--gold)" />
+          <DashCard icon="📜" count={history.length} label="History" color="#60a5fa" />
+          <DashCard icon="📋" count={activeBookings.length} label="Total Bookings" color="var(--status-approved)" />
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 24, marginTop: 32, alignItems: 'start' }}>
@@ -104,7 +117,7 @@ export default function Dashboard() {
                       <div className="booking-item-name">{b.resource?.name}</div>
                       <div className="booking-item-time"><span>📅</span>{fmt(b.start_time)}</div>
                     </div>
-                    <span className={`badge badge-${b.status}`}>{b.status}</span>
+                    {getStatusBadge(b)}
                   </div>
                 ))}
               </div>
