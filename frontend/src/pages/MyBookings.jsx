@@ -11,7 +11,18 @@ const TABS = [
   { value: 'cancelled',  label: 'Cancelled' },
 ]
 
-import { formatDateTime, formatTimeOnly } from '../utils/format'
+// Format naive datetime string from API (no Z) — parse as local for correct display
+function fmtDT(isoStr) {
+  if (!isoStr) return ''
+  return new Date(isoStr).toLocaleString('en-IN', {
+    weekday: 'short', day: 'numeric', month: 'short',
+    hour: '2-digit', minute: '2-digit', hour12: true
+  })
+}
+function fmtTime(isoStr) {
+  if (!isoStr) return ''
+  return new Date(isoStr).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+}
 
 export default function MyBookings() {
   const { user } = useAuth()
@@ -56,7 +67,10 @@ export default function MyBookings() {
   }
 
   const canCancel = (b) => {
-    return b.status === 'confirmed' && new Date(b.start_time) > new Date()
+    if (b.status !== 'confirmed') return false
+    // API returns naive string (no Z). new Date() parses it as local — compare with local now
+    const startTime = new Date(b.start_time)
+    return startTime > new Date()
   }
 
   const totalPages = Math.ceil(total / LIMIT)
@@ -130,7 +144,7 @@ export default function MyBookings() {
                   <div className="booking-item-name">{b.resource?.name || `Resource #${b.resource_id}`}</div>
                   <div className="booking-item-time">
                     <span>📅</span>
-                    {formatDateTime(b.start_time)} → {formatTimeOnly(b.end_time)}
+                    {fmtDT(b.start_time)} &rarr; {fmtTime(b.end_time)}
                   </div>
                   {b.purpose && (
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>

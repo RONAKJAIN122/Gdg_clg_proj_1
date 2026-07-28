@@ -129,7 +129,14 @@ class BookingOut(BaseModel):
     resource: Optional[ResourceOut] = None
     user: Optional[UserOut] = None
 
-    model_config = {"from_attributes": True}
+    model_config = {
+        "from_attributes": True,
+        # Serialize datetimes as naive strings (no Z / timezone suffix)
+        # so the frontend can display them as wall-clock time without IST shift
+        "json_encoders": {
+            datetime: lambda v: v.strftime("%Y-%m-%dT%H:%M:%S") if v else None
+        },
+    }
 
 
 class WaitlistJoin(BaseModel):

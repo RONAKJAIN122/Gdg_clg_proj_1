@@ -1,5 +1,25 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 
+// API now returns naive datetime strings like "2026-07-29T10:00:00" (no Z).
+// new Date("2026-07-29T10:00:00") is parsed as LOCAL time → getHours() = 10 → correct!
+function fmtTime(isoStr) {
+  if (!isoStr) return ''
+  const d = new Date(isoStr)
+  const h = d.getHours()
+  const m = d.getMinutes()
+  const period = h >= 12 ? 'PM' : 'AM'
+  const h12 = h % 12 === 0 ? 12 : h % 12
+  return `${h12}:${String(m).padStart(2, '0')} ${period}`
+}
+
+function fmtDate(isoStr) {
+  if (!isoStr) return ''
+  const d = new Date(isoStr)
+  return d.toLocaleDateString('en-IN', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+  })
+}
+
 export default function BookingSuccess() {
   const { state } = useLocation()
   const navigate = useNavigate()
@@ -13,12 +33,8 @@ export default function BookingSuccess() {
   }
 
   const start = new Date(booking.start_time)
-  const end = new Date(booking.end_time)
-
-  const fmt = (d) => d.toLocaleString('en-IN', {
-    weekday: 'short', day: 'numeric', month: 'short',
-    hour: '2-digit', minute: '2-digit', hour12: true
-  })
+  const end   = new Date(booking.end_time)
+  const durationMins = Math.round((end - start) / 60000)
 
   return (
     <div className="page">
@@ -30,7 +46,7 @@ export default function BookingSuccess() {
             Booking Confirmed!
           </h1>
           <p style={{ color: 'var(--text-muted)', marginBottom: 8 }}>
-            Your booking has been successfully submitted.
+            Your reservation has been successfully submitted.
           </p>
 
           <div className="booking-id-chip">
@@ -40,20 +56,21 @@ export default function BookingSuccess() {
           {/* Details card */}
           <div className="card" style={{ padding: 24, textAlign: 'left', width: '100%', margin: '24px 0' }}>
             {[
-              { label: 'Resource', value: resource?.name || `Resource #${booking.resource_id}` },
-              { label: 'Date & Time', value: `${fmt(start)} – ${end.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}` },
-              { label: 'Duration', value: `${Math.round((end - start) / 60000)} minutes` },
-              { label: 'Purpose', value: booking.purpose || '—' },
-              { label: 'Status', value: null },
+              { label: 'Resource', value: resource?.name || booking.resource?.name || `Resource #${booking.resource_id}` },
+              { label: 'Date',     value: fmtDate(booking.start_time) },
+              { label: 'Time',     value: `${fmtTime(booking.start_time)} – ${fmtTime(booking.end_time)}` },
+              { label: 'Duration', value: `${durationMins} minutes` },
+              { label: 'Purpose',  value: booking.purpose || '—' },
+              { label: 'Status',   value: null },
             ].map(row => (
               <div key={row.label} style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 padding: '10px 0', borderBottom: '1px solid var(--border)'
               }}>
-                <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>{row.label}</span>
+                <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', flexShrink: 0 }}>{row.label}</span>
                 {row.value === null
                   ? <span className={`badge badge-${booking.status}`}>{booking.status}</span>
-                  : <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>{row.value}</span>
+                  : <span style={{ fontSize: '0.875rem', fontWeight: 500, textAlign: 'right', marginLeft: 12 }}>{row.value}</span>
                 }
               </div>
             ))}
