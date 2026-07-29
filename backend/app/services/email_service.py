@@ -47,6 +47,7 @@ async def _send_via_brevo(to: str, subject: str, html_body: str) -> None:
                 "to": [{"email": to}],
                 "subject": subject,
                 "htmlContent": html_body,
+                "tags": ["otp-instant"],
             },
         )
         if resp.status_code in (200, 201):

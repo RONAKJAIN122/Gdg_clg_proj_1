@@ -11,8 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import OTPCode, User
 
 
-OTP_VALID_MINUTES = 15
-OTP_RATE_LIMIT = 10          # max OTPs per window
+OTP_VALID_MINUTES = 5
+OTP_RATE_LIMIT = 3          # max OTPs per window
 OTP_RATE_WINDOW_MINUTES = 10
 
 
