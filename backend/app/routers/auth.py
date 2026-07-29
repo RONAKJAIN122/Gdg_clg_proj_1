@@ -17,11 +17,14 @@ async def send_otp(
     db: AsyncSession = Depends(get_db),
 ):
     async with db.begin():
-        user = await otp_service.get_or_create_user(db, payload.email, payload.name)
         try:
+            user = await otp_service.get_or_create_user(db, payload.email, payload.name)
             code = await otp_service.create_otp(db, user)
         except ValueError as e:
-            raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=str(e))
+            err_msg = str(e)
+            if "Beta Testing Mode" in err_msg:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=err_msg)
+            raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=err_msg)
 
     # Send email in FastAPI BackgroundTask (managed by framework, guaranteed execution)
     background_tasks.add_task(email_service.send_otp_email, payload.email, payload.name, code)

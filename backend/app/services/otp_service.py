@@ -15,12 +15,36 @@ OTP_VALID_MINUTES = 5
 OTP_RATE_LIMIT = 3          # max OTPs per window
 OTP_RATE_WINDOW_MINUTES = 10
 
+# ---------------------------------------------------------------------------
+# TEMPORARY TESTING WHITELIST (Set ENABLE_TEMP_WHITELIST = False to disable)
+# ---------------------------------------------------------------------------
+ENABLE_TEMP_WHITELIST = True
+TEMP_ALLOWED_EMAILS = {
+    "25ucc183@lnmiit.ac.in",
+    "25ucs093@lnmiit.ac.in",
+    "25ucs012@lnmiit.ac.in",
+    "25ucs216@lnmiit.ac.in",
+    "lnmiiitopt@gmail.com",
+    "jain.ronak122@gmail.com",
+}
+
+
+def check_email_whitelisted(email: str) -> None:
+    """Raises ValueError if temporary whitelist is enabled and email is not allowed."""
+    if ENABLE_TEMP_WHITELIST:
+        clean_email = email.strip().lower()
+        if clean_email not in TEMP_ALLOWED_EMAILS:
+            raise ValueError(
+                "Beta Testing Mode: This email is not on the invited testers list."
+            )
+
 
 def _generate_otp() -> str:
     return "".join(random.choices(string.digits, k=6))
 
 
 async def get_or_create_user(db: AsyncSession, email: str, name: str) -> User:
+    check_email_whitelisted(email)
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
     if not user:

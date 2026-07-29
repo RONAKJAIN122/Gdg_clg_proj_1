@@ -37,19 +37,32 @@ export default function Login() {
     return () => clearTimeout(cooldownRef.current)
   }, [cooldown])
 
+  const normalizeEmail = (raw) => {
+    const trimmed = raw.trim()
+    if (trimmed && !trimmed.includes('@')) {
+      return `${trimmed}@lnmiit.ac.in`
+    }
+    return trimmed
+  }
+
   const handleSendOTP = async (e) => {
     e.preventDefault()
-    if (!name.trim() || !email.trim()) {
+    const targetEmail = normalizeEmail(email)
+    if (targetEmail !== email) {
+      setEmail(targetEmail)
+    }
+
+    if (!name.trim() || !targetEmail) {
       setError('Please fill in your name and email')
       return
     }
     setError('')
     setLoading(true)
     try {
-      await client.post('/api/auth/send-otp', { name: name.trim(), email: email.trim() })
+      await client.post('/api/auth/send-otp', { name: name.trim(), email: targetEmail })
       setStep(2)
       setCooldown(60)
-      addToast('OTP sent! Check your email (or server console in dev)', 'success')
+      addToast('OTP sent! Check your email', 'success')
       setTimeout(() => otpRefs.current[0]?.focus(), 100)
     } catch (err) {
       if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
@@ -58,7 +71,9 @@ export default function Login() {
         const msg = typeof err.response?.data?.detail === 'string' 
           ? err.response.data.detail 
           : (Array.isArray(err.response?.data?.detail) ? err.response.data.detail[0]?.msg : null)
-        if (err.response?.status === 429) {
+        if (err.response?.status === 403) {
+          setError(msg || 'Access restricted: Email not in testing whitelist.')
+        } else if (err.response?.status === 429) {
           setError(msg || 'Too many requests. Please wait 10 minutes before trying again.')
         } else {
           setError(msg || 'Failed to send OTP. Please try again.')
@@ -198,11 +213,15 @@ export default function Login() {
               <div className="form-group">
                 <label className="form-label">Email Address</label>
                 <input
-                  type="email"
+                  type="text"
                   className={`form-input ${error && !email ? 'error' : ''}`}
-                  placeholder="you@lnmiit.ac.in"
+                  placeholder="25ucc183 or you@lnmiit.ac.in"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
+                  onBlur={e => {
+                    const norm = normalizeEmail(e.target.value)
+                    if (norm !== email) setEmail(norm)
+                  }}
                   autoComplete="email"
                 />
               </div>
