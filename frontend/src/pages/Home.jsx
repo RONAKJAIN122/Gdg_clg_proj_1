@@ -143,95 +143,83 @@ export default function Home() {
   return (
     <div style={{ minHeight: '100vh' }}>
       
-      {/* ── HERO SECTION ── */}
-      <section className="hero">
-        <div className="hero-bg" />
-        <div className="hero-glow" />
-        <div className="hero-glow-2" />
-
-        <div className="hero-content container">
+      {/* ── MAKEMYTRIP STYLE HERO SECTION ── */}
+      <section className="mmt-hero">
+        <div className="container mmt-hero-container">
           
-          {/* Eyebrow badge */}
-          <div className="animate-fade-up" style={{ animationDelay: '0s' }}>
-            <span className="hero-eyebrow" style={{
-              background: 'var(--maroon-dim)',
-              border: '1px solid rgba(142, 30, 36, 0.35)',
-              boxShadow: '0 4px 12px rgba(122, 15, 23, 0.2)',
-              letterSpacing: '0.04em',
-            }}>
-              ✨ LNMIIT SMART CAMPUS PORTAL
+          {/* Eyebrow tag */}
+          <div className="animate-fade-up">
+            <span className="mmt-hero-tag">
+              🏛️ LNMIIT SMART CAMPUS PORTAL
             </span>
           </div>
 
           {/* Main Title */}
-          <h1 className="hero-title animate-fade-up" style={{ animationDelay: '0.05s', fontSize: '2.75rem', lineHeight: 1.2 }}>
-            Reserve Campus Resources<br />
-            <span className="highlight" style={{
-              background: 'linear-gradient(135deg, var(--gold) 0%, #F59E0B 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}>
-              Seamlessly &amp; Confidently.
-            </span>
+          <h1 className="mmt-hero-title animate-fade-up" style={{ animationDelay: '0.05s' }}>
+            Book Campus Auditoriums, Lecture Halls &amp; Equipment
           </h1>
 
-          <p className="hero-subtitle animate-fade-up" style={{ animationDelay: '0.1s', maxWidth: 620, margin: '0 auto 28px' }}>
-            Auditoriums, Sony DSLRs, Lecture Rooms, and SAC Sports Grounds — all in one real-time booking engine with zero double-bookings.
-          </p>
-
-          {/* Quick Reservation Card */}
-          <div className="booking-card animate-fade-up" style={{
-            animationDelay: '0.15s',
-            boxShadow: 'var(--shadow-lg)',
-            border: '1px solid var(--border)',
-            backdropFilter: 'blur(12px)',
-          }}>
-            <div className="booking-card-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div className="icon">📅</div>
-                <span style={{ fontWeight: 700, fontSize: '1.0625rem' }}>Quick Reservation</span>
-              </div>
-              <span style={{ fontSize: '0.75rem', color: 'var(--gold)', background: 'var(--gold-dim)', padding: '4px 10px', borderRadius: 20, fontWeight: 600 }}>
-                ⚡ Auto-fills your selection
-              </span>
+          {/* Floating Search Widget (MakeMyTrip Style) */}
+          <div className="mmt-search-card animate-fade-up" style={{ animationDelay: '0.1s' }}>
+            
+            {/* Top Category Tabs */}
+            <div className="mmt-tabs">
+              {[
+                { id: '', label: 'All Facilities', icon: '🌐' },
+                { id: 'hall', label: 'Auditoriums & Halls', icon: '🏛️' },
+                { id: 'equipment', label: 'Media & Camera Gear', icon: '📷' },
+                { id: 'room', label: 'Lecture Halls & Labs', icon: '🚪' },
+                { id: 'other', label: 'SAC & Sports Grounds', icon: '⚽' },
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  className={`mmt-tab-btn ${form.type === tab.id ? 'active' : ''}`}
+                  onClick={() => set('type', tab.id)}
+                >
+                  <span>{tab.icon}</span>
+                  <span>{tab.label}</span>
+                </button>
+              ))}
             </div>
 
+            {/* MakeMyTrip 4-Column Fields Grid */}
             <form onSubmit={handleContinue}>
-              <div className="booking-card-grid">
+              <div className="mmt-fields-grid">
                 
-                {/* Resource Type */}
-                <div className="form-group">
-                  <label className="form-label">Resource Type</label>
+                {/* Field 1: Category */}
+                <div className="mmt-field-box">
+                  <span className="mmt-field-label">CATEGORY</span>
                   <select
-                    className="form-select"
+                    className="mmt-field-select"
                     value={form.type}
                     onChange={e => set('type', e.target.value)}
                   >
                     <option value="">All Resource Categories</option>
-                    <option value="hall">🏛️ Seminar Halls & Auditoriums</option>
-                    <option value="equipment">📷 Media & Camera Gear</option>
-                    <option value="room">🚪 Lecture Halls & Labs</option>
-                    <option value="other">⚽ SAC & Sports Grounds</option>
+                    <option value="hall">🏛️ Auditoriums &amp; Halls</option>
+                    <option value="equipment">📷 Media &amp; Camera Gear</option>
+                    <option value="room">🚪 Lecture Halls &amp; Labs</option>
+                    <option value="other">⚽ SAC &amp; Sports Grounds</option>
                   </select>
                 </div>
 
-                {/* Date */}
-                <div className="form-group">
-                  <label className="form-label">Booking Date</label>
+                {/* Field 2: Date */}
+                <div className="mmt-field-box">
+                  <span className="mmt-field-label">BOOKING DATE</span>
                   <input
                     type="date"
-                    className="form-input"
+                    className="mmt-field-input"
                     value={form.date}
                     min={todayStr}
                     onChange={e => set('date', e.target.value)}
                   />
                 </div>
 
-                {/* Start Time AM/PM */}
-                <div className="form-group">
-                  <label className="form-label">Start Time (12h AM/PM)</label>
+                {/* Field 3: Start Time */}
+                <div className="mmt-field-box">
+                  <span className="mmt-field-label">START TIME (12H AM/PM)</span>
                   <select
-                    className="form-select"
+                    className="mmt-field-select"
                     value={form.time}
                     onChange={e => set('time', e.target.value)}
                   >
@@ -240,38 +228,33 @@ export default function Home() {
                     ))}
                   </select>
                 </div>
-              </div>
 
-              {/* Purpose */}
-              <div className="booking-card-grid" style={{ gridTemplateColumns: '1fr', marginTop: 12 }}>
-                <div className="form-group">
-                  <label className="form-label">Event Purpose / Club Name</label>
+                {/* Field 4: Event Purpose */}
+                <div className="mmt-field-box">
+                  <span className="mmt-field-label">EVENT PURPOSE / CLUB</span>
                   <input
                     type="text"
-                    className="form-input"
-                    placeholder="e.g. Cipher Club Meet, Hackathon Briefing, Photography Practice..."
+                    className="mmt-field-input"
+                    placeholder="e.g. Club Meet, Practice..."
                     value={form.purpose}
                     onChange={e => set('purpose', e.target.value)}
                   />
                 </div>
+
               </div>
 
-              <div className="booking-card-footer" style={{ marginTop: 20 }}>
-                <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
-                  {isLoggedIn
-                    ? '✓ Logged in as LNMIIT member'
-                    : '🔒 Verify with your @lnmiit.ac.in OTP'
-                  }
-                </p>
-                <button type="submit" className="btn btn-primary btn-lg" style={{ minWidth: 200, gap: 8 }}>
-                  {isLoggedIn ? 'Continue to Resources →' : 'Browse & Reserve →'}
+              {/* Floating Action Button (Overlapping Card Bottom) */}
+              <div className="mmt-search-btn-wrapper">
+                <button type="submit" className="mmt-search-btn">
+                  SEARCH AVAILABLE RESOURCES →
                 </button>
               </div>
             </form>
+
           </div>
 
-          {/* Stats Bar */}
-          <div className="stats-grid animate-fade-up stagger" style={{ animationDelay: '0.25s', marginTop: 32 }}>
+          {/* Quick Stats Grid below Hero Card */}
+          <div className="stats-grid animate-fade-up stagger" style={{ animationDelay: '0.25s', marginTop: 52 }}>
             {STATS.map(s => (
               <div key={s.label} className="stat-card" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
                 <span className="stat-number" style={{ color: 'var(--gold)' }}>{s.value}</span>
@@ -449,8 +432,8 @@ export default function Home() {
               {/* Right Column: Campus Image Showcase */}
               <div style={{ position: 'relative', minHeight: 340, height: '100%', overflow: 'hidden' }}>
                 <img
-                  src="https://lnmiit.ac.in/wp-content/uploads/2023/06/LNMIIT-VIEW.jpg"
-                  alt="LNMIIT Campus Aerial View"
+                  src="https://lnmiit.ac.in/wp-content/uploads/2023/12/licai.jpeg"
+                  alt="LNMIIT LIC Building"
                   style={{
                     width: '100%',
                     height: '100%',
