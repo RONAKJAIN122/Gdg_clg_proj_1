@@ -162,27 +162,6 @@ export default function Home() {
           {/* Floating Search Widget (MakeMyTrip Style) */}
           <div className="mmt-search-card animate-fade-up" style={{ animationDelay: '0.1s' }}>
             
-            {/* Top Category Tabs */}
-            <div className="mmt-tabs">
-              {[
-                { id: '', label: 'All Facilities', icon: '🌐' },
-                { id: 'hall', label: 'Auditoriums & Halls', icon: '🏛️' },
-                { id: 'equipment', label: 'Media & Camera Gear', icon: '📷' },
-                { id: 'room', label: 'Lecture Halls & Labs', icon: '🚪' },
-                { id: 'other', label: 'SAC & Sports Grounds', icon: '⚽' },
-              ].map(tab => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  className={`mmt-tab-btn ${form.type === tab.id ? 'active' : ''}`}
-                  onClick={() => set('type', tab.id)}
-                >
-                  <span>{tab.icon}</span>
-                  <span>{tab.label}</span>
-                </button>
-              ))}
-            </div>
-
             {/* MakeMyTrip 4-Column Fields Grid */}
             <form onSubmit={handleContinue}>
               <div className="mmt-fields-grid">
@@ -432,8 +411,8 @@ export default function Home() {
               {/* Right Column: Campus Image Showcase */}
               <div style={{ position: 'relative', minHeight: 340, height: '100%', overflow: 'hidden' }}>
                 <img
-                  src="https://lnmiit.ac.in/wp-content/uploads/2023/12/licai.jpeg"
-                  alt="LNMIIT LIC Building"
+                  src="https://lnmiit.ac.in/wp-content/uploads/elementor/thumbs/360-VIEW-OF-LNMIIT-qldsbtsd381ucrq40uxr78t3sge51xhpj15jmmwkvs.jpg"
+                  alt="360 View of LNMIIT Campus"
                   style={{
                     width: '100%',
                     height: '100%',

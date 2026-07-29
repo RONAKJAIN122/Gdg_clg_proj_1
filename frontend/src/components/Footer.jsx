@@ -46,12 +46,11 @@ export default function Footer() {
           </div>
 
           <div className="footer-col">
-            <h4>Help &amp; Legal</h4>
+            <h4>LNMIIT Portal</h4>
             <ul className="footer-links">
-              <li><a href="https://www.lnmiit.ac.in" target="_blank" rel="noreferrer">LNMIIT Website</a></li>
-              <li><button onClick={() => {}}>Campus Map</button></li>
-              <li><button onClick={() => {}}>Privacy Policy</button></li>
-              <li><button onClick={() => {}}>Terms of Use</button></li>
+              <li><a href="https://www.lnmiit.ac.in" target="_blank" rel="noreferrer">LNMIIT Official Site ↗</a></li>
+              <li><Link to="/resources">Campus Resources</Link></li>
+              <li><Link to="/my-bookings">Student Bookings</Link></li>
             </ul>
           </div>
         </div>
