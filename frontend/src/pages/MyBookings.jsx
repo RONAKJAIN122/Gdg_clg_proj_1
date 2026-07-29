@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import client from '../api/client'
 
+import { parseNaiveDT } from '../utils/format'
+
 const TABS = [
   { value: 'ongoing',  label: 'Ongoing 🟢' },
   { value: 'upcoming', label: 'Upcoming 📅' },
@@ -11,8 +13,7 @@ const TABS = [
 ]
 
 function parseDt(isoStr) {
-  if (!isoStr) return new Date()
-  return new Date(isoStr.endsWith('Z') || isoStr.includes('+') ? isoStr : isoStr + 'Z')
+  return parseNaiveDT(isoStr)
 }
 
 function fmtDT(isoStr) {

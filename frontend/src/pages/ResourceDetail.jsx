@@ -20,10 +20,10 @@ function generateTimeOptions(openTimeStr = '09:00', closeTimeStr = '21:00') {
   return options
 }
 
-// Format naive API datetime string (no Z) as local time AM/PM
+// Format naive API datetime string ("2026-07-29T10:00:00") as AM/PM
 function fmtApiTime(isoStr) {
   if (!isoStr) return ''
-  const d = new Date(isoStr)
+  const d = parseNaiveDT(isoStr)
   const h = d.getHours()
   const m = d.getMinutes()
   const period = h >= 12 ? 'PM' : 'AM'
@@ -45,9 +45,9 @@ function Timeline({ bookings, userId, openTime, closeTime }) {
     return `${h12}${p}`
   }
 
-  // Position % from naive API datetime string (parsed as local)
+  // Position % from naive API datetime string (parsed as wall-clock time)
   const dtToPos = (isoStr) => {
-    const d = new Date(isoStr)
+    const d = parseNaiveDT(isoStr)
     return ((d.getHours() + d.getMinutes() / 60 - openH) / totalH) * 100
   }
 
@@ -193,10 +193,10 @@ export default function ResourceDetail() {
 
     setSubmitting(true)
     try {
-      // Append Z so the selected wall-clock time is treated as UTC directly
+      // Send naive ISO string (no Z) so selected wall-clock time is preserved exactly
       // (avoids browser local timezone shifting the time before sending)
-      const startISO = `${form.booking_date}T${form.start_time}:00Z`
-      const endISO   = `${form.booking_date}T${form.end_time}:00Z`
+      const startISO = `${form.booking_date}T${form.start_time}:00`
+      const endISO   = `${form.booking_date}T${form.end_time}:00`
 
       const res = await client.post('/api/bookings', {
         resource_id: parseInt(id),

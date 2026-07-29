@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { useToast } from '../context/ToastContext'
 import client from '../api/client'
 
+import { parseNaiveDT } from '../utils/format'
+
 const STATUS_OPTS = [
   { value: '', label: 'All Statuses' },
   { value: 'confirmed', label: 'Confirmed' },
@@ -11,8 +13,7 @@ const STATUS_OPTS = [
 ]
 
 function parseDt(isoStr) {
-  if (!isoStr) return new Date()
-  return new Date(isoStr.endsWith('Z') || isoStr.includes('+') ? isoStr : isoStr + 'Z')
+  return parseNaiveDT(isoStr)
 }
 
 function fmt(dt) {

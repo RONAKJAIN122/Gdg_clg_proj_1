@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import client from '../api/client'
 
+import { parseNaiveDT } from '../utils/format'
+
 function DashCard({ icon, count, label, color }) {
   return (
     <div className="dash-card animate-fade-up">
@@ -36,23 +38,23 @@ export default function Dashboard() {
   const now = new Date()
   const activeBookings = bookings.filter(b => b.status !== 'cancelled')
 
-  const ongoing = activeBookings.filter(b => b.status === 'confirmed' && new Date(b.start_time) <= now && new Date(b.end_time) >= now)
-  const upcoming = activeBookings.filter(b => b.status === 'confirmed' && new Date(b.start_time) > now)
-  const history = activeBookings.filter(b => b.status === 'completed' || new Date(b.end_time) < now)
+  const ongoing = activeBookings.filter(b => b.status === 'confirmed' && parseNaiveDT(b.start_time) <= now && parseNaiveDT(b.end_time) >= now)
+  const upcoming = activeBookings.filter(b => b.status === 'confirmed' && parseNaiveDT(b.start_time) > now)
+  const history = activeBookings.filter(b => b.status === 'completed' || parseNaiveDT(b.end_time) < now)
 
-  const recent = [...activeBookings].sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime()).slice(0, 5)
+  const recent = [...activeBookings].sort((a, b) => parseNaiveDT(b.start_time).getTime() - parseNaiveDT(a.start_time).getTime()).slice(0, 5)
 
   const getStatusBadge = (b) => {
-    if (b.status === 'confirmed' && new Date(b.start_time) <= now && new Date(b.end_time) >= now) {
+    if (b.status === 'confirmed' && parseNaiveDT(b.start_time) <= now && parseNaiveDT(b.end_time) >= now) {
       return <span className="badge" style={{ background: '#16a34a', color: '#fff', fontWeight: 700 }}>● ONGOING</span>
     }
-    if (b.status === 'confirmed' && new Date(b.start_time) > now) {
+    if (b.status === 'confirmed' && parseNaiveDT(b.start_time) > now) {
       return <span className="badge badge-confirmed">UPCOMING</span>
     }
     return <span className="badge badge-completed">COMPLETED</span>
   }
 
-  const fmt = (dt) => new Date(dt).toLocaleString('en-IN', {
+  const fmt = (dt) => parseNaiveDT(dt).toLocaleString('en-IN', {
     day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true
   })
 

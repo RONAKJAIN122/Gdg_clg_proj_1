@@ -1,10 +1,9 @@
 import { useLocation, useNavigate } from 'react-router-dom'
+import { parseNaiveDT } from '../utils/format'
 
-// API now returns naive datetime strings like "2026-07-29T10:00:00" (no Z).
-// new Date("2026-07-29T10:00:00") is parsed as LOCAL time → getHours() = 10 → correct!
 function fmtTime(isoStr) {
   if (!isoStr) return ''
-  const d = new Date(isoStr)
+  const d = parseNaiveDT(isoStr)
   const h = d.getHours()
   const m = d.getMinutes()
   const period = h >= 12 ? 'PM' : 'AM'
@@ -14,7 +13,7 @@ function fmtTime(isoStr) {
 
 function fmtDate(isoStr) {
   if (!isoStr) return ''
-  const d = new Date(isoStr)
+  const d = parseNaiveDT(isoStr)
   return d.toLocaleDateString('en-IN', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
   })
@@ -32,8 +31,8 @@ export default function BookingSuccess() {
     return null
   }
 
-  const start = new Date(booking.start_time)
-  const end   = new Date(booking.end_time)
+  const start = parseNaiveDT(booking.start_time)
+  const end   = parseNaiveDT(booking.end_time)
   const durationMins = Math.round((end - start) / 60000)
 
   return (
