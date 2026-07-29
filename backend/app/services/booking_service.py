@@ -257,8 +257,9 @@ async def cancel_booking(db: AsyncSession, booking_id: int, user: User) -> Booki
             raise HTTPException(status_code=403, detail="Not authorised to cancel this booking")
 
         # Cannot cancel after start
-        # booking.start_time from SQLite is naive UTC — compare with naive UTC now
-        if booking.start_time <= datetime.utcnow():
+        start_utc = _to_utc(booking.start_time)
+        now_utc = datetime.now(timezone.utc)
+        if start_utc <= now_utc:
             raise HTTPException(
                 status_code=400, detail="Cannot cancel a booking that has already started"
             )

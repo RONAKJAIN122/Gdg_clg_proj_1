@@ -10,8 +10,13 @@ const STATUS_OPTS = [
   { value: 'cancelled', label: 'Cancelled' },
 ]
 
+function parseDt(isoStr) {
+  if (!isoStr) return new Date()
+  return new Date(isoStr.endsWith('Z') || isoStr.includes('+') ? isoStr : isoStr + 'Z')
+}
+
 function fmt(dt) {
-  return new Date(dt).toLocaleString('en-IN', {
+  return parseDt(dt).toLocaleString('en-IN', {
     day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true
   })
 }
@@ -206,7 +211,7 @@ export default function Admin() {
                         </td>
                         <td><span className={`badge badge-${b.status}`}>{b.status}</span></td>
                         <td>
-                          {b.status === 'confirmed' && new Date(b.start_time) > new Date() && (
+                          {b.status === 'confirmed' && parseDt(b.start_time) > new Date() && (
                             <button
                               className="btn btn-ghost btn-sm"
                               style={{ color: '#f87171' }}
