@@ -92,7 +92,11 @@ export default function MyBookings() {
   const getStatusBadge = (b) => {
     const now = new Date()
     if (b.status === 'confirmed' && parseDt(b.start_time) <= now && parseDt(b.end_time) >= now) {
-      return <span className="badge" style={{ background: '#16a34a', color: '#fff', fontWeight: 700 }}>● ONGOING</span>
+      return (
+        <span className="badge-ongoing">
+          <span className="pulse-live-dot" /> ONGOING
+        </span>
+      )
     }
     if (b.status === 'confirmed' && parseDt(b.start_time) > now) {
       return <span className="badge badge-confirmed">UPCOMING</span>
