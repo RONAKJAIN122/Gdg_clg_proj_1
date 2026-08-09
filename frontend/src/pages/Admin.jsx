@@ -120,28 +120,75 @@ export default function Admin() {
     <div className="page">
       <div className="container" style={{ paddingTop: 40, paddingBottom: 60 }}>
 
-        <div className="page-header">
-          <div className="page-header-top">
-            <div>
-              <h1 className="page-title">Admin Panel</h1>
-              <p className="page-subtitle">Manage resources and all campus bookings</p>
+        {/* Admin Executive Command Center Banner */}
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(122,15,23,0.3) 0%, rgba(20,24,30,0.95) 100%)',
+          border: '1px solid rgba(212,175,55,0.4)',
+          borderRadius: 'var(--radius-xl)',
+          padding: '24px 28px',
+          marginBottom: 32,
+          boxShadow: 'var(--shadow-lg)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 20
+        }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+              <span style={{ fontSize: '1.25rem' }}>🛡️</span>
+              <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                LNMIIT Admin Command Center
+              </h1>
+              <span className="badge" style={{ background: '#16a34a', color: '#fff', fontWeight: 700, fontSize: '0.72rem' }}>
+                ● SYSTEM OPERATIONAL
+              </span>
+            </div>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+              Master control panel — Manage campus facilities, override reservations, and control access.
+            </p>
+
+            <div style={{ display: 'flex', gap: 14, marginTop: 14, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.78rem', background: 'var(--card)', border: '1px solid var(--border)', padding: '4px 10px', borderRadius: 20, color: 'var(--gold)', fontWeight: 600 }}>
+                📊 Total Bookings: {bTotal}
+              </span>
+              <span style={{ fontSize: '0.78rem', background: 'var(--card)', border: '1px solid var(--border)', padding: '4px 10px', borderRadius: 20, color: 'var(--text-primary)', fontWeight: 600 }}>
+                🏛️ Active Facilities: {resources.length}
+              </span>
+              <span style={{ fontSize: '0.78rem', background: 'var(--card)', border: '1px solid var(--border)', padding: '4px 10px', borderRadius: 20, color: '#4ade80', fontWeight: 600 }}>
+                🔒 Whitelist Guard: ON (admin@me.in)
+              </span>
             </div>
           </div>
 
-          <div className="filter-tabs" style={{ marginTop: 24 }}>
-            {[
-              { value: 'bookings', label: '📅 All Bookings' },
-              { value: 'resources', label: '🏛️ Resources' },
-            ].map(t => (
-              <button
-                key={t.value}
-                className={`filter-tab ${activeTab === t.value ? 'active' : ''}`}
-                onClick={() => setActiveTab(t.value)}
-              >
-                {t.label}
-              </button>
-            ))}
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={() => {
+                setActiveTab('resources')
+                setEditingResource(null)
+                setRForm({ name: '', description: '', location: '', category: 'hall', open_time: '09:00', close_time: '21:00' })
+                setShowResourceForm(true)
+              }}
+            >
+              + Add Resource
+            </button>
           </div>
+        </div>
+
+        <div className="filter-tabs" style={{ marginBottom: 24 }}>
+          {[
+            { value: 'bookings', label: '📅 All Campus Bookings' },
+            { value: 'resources', label: '🏛️ Facility Directory' },
+          ].map(t => (
+            <button
+              key={t.value}
+              className={`filter-tab ${activeTab === t.value ? 'active' : ''}`}
+              onClick={() => setActiveTab(t.value)}
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
 
         {/* ── Bookings Tab ── */}

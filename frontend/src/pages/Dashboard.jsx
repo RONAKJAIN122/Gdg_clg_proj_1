@@ -66,12 +66,42 @@ export default function Dashboard() {
     <div className="page">
       <div className="container" style={{ paddingTop: 40, paddingBottom: 60 }}>
 
-        {/* Welcome */}
-        <div style={{ marginBottom: 32 }}>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: 4 }}>
-            Welcome back, {user?.name?.split(' ')[0]} 👋
-          </h1>
-          <p style={{ color: 'var(--text-muted)' }}>Here's your booking activity overview</p>
+        {/* Command Center Header */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justify: 'space-between',
+          flexWrap: 'wrap',
+          gap: 16,
+          marginBottom: 28,
+          padding: '24px 28px',
+          background: 'var(--card)',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--radius-xl)',
+          boxShadow: 'var(--shadow)'
+        }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+              <h1 style={{ fontSize: '1.75rem', fontWeight: 800 }}>
+                Control Command Center
+              </h1>
+              <span className="badge" style={{ background: 'var(--maroon-dim)', color: 'var(--gold)', border: '1px solid rgba(212,175,55,0.3)', fontSize: '0.75rem' }}>
+                ⚡ User Mode
+              </span>
+            </div>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+              Welcome back, {user?.name} ({user?.email}) — Full control of your LNMIIT reservations.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <button className="btn btn-primary btn-sm" onClick={() => navigate('/resources')}>
+              + New Reservation
+            </button>
+            <button className="btn btn-secondary btn-sm" onClick={() => navigate('/my-bookings')}>
+              Manage All Bookings →
+            </button>
+          </div>
         </div>
 
         {/* Stats */}

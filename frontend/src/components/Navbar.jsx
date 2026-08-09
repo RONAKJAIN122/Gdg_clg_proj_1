@@ -160,8 +160,16 @@ export default function Navbar() {
               <Link
                 to="/admin"
                 className={`nav-link ${location.pathname === '/admin' ? 'active' : ''}`}
+                style={{
+                  background: 'rgba(212, 175, 55, 0.15)',
+                  color: 'var(--gold)',
+                  border: '1px solid rgba(212, 175, 55, 0.3)',
+                  fontWeight: 700,
+                  borderRadius: 20,
+                  padding: '6px 14px',
+                }}
               >
-                Admin
+                🛡️ Admin Control Panel
               </Link>
             </li>
           )}
@@ -169,6 +177,22 @@ export default function Navbar() {
 
         {/* Actions */}
         <div className="navbar-actions">
+          {/* Live Control Status Pill */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            color: '#22c55e',
+            background: 'rgba(34, 197, 94, 0.1)',
+            border: '1px solid rgba(34, 197, 94, 0.3)',
+            padding: '4px 10px',
+            borderRadius: 20,
+          }}>
+            <span className="pulse-live-dot" style={{ width: 6, height: 6 }} />
+            System Active
+          </div>
           <button
             className="theme-btn"
             onClick={toggleTheme}
