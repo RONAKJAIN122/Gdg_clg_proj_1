@@ -29,6 +29,8 @@ export default function Login() {
     }
   }, [isLoggedIn, navigate])
 
+  const [adminOtp, setAdminOtp] = useState('')
+
   // Cooldown timer
   useEffect(() => {
     if (cooldown > 0) {
@@ -39,7 +41,11 @@ export default function Login() {
 
   const normalizeEmail = (raw) => {
     const trimmed = raw.trim()
-    if (trimmed && !trimmed.includes('@')) {
+    if (!trimmed) return ''
+    if (trimmed.toLowerCase() === 'admin' || trimmed.toLowerCase() === 'admin@me.in') {
+      return 'admin@me.in'
+    }
+    if (!trimmed.includes('@')) {
       return `${trimmed}@lnmiit.ac.in`
     }
     return trimmed
@@ -58,11 +64,18 @@ export default function Login() {
     }
     setError('')
     setLoading(true)
+    setAdminOtp('')
     try {
-      await client.post('/api/auth/send-otp', { name: name.trim(), email: targetEmail })
+      const res = await client.post('/api/auth/send-otp', { name: name.trim(), email: targetEmail })
       setStep(2)
       setCooldown(60)
-      addToast('OTP sent! Check your email', 'success')
+      if (res.data?.admin_otp) {
+        setAdminOtp(res.data.admin_otp)
+        setOtp(res.data.admin_otp.split(''))
+        addToast(`🔑 Admin OTP Code: ${res.data.admin_otp}`, 'success')
+      } else {
+        addToast('OTP sent! Check your email', 'success')
+      }
       setTimeout(() => otpRefs.current[0]?.focus(), 100)
     } catch (err) {
       if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
@@ -241,7 +254,40 @@ export default function Login() {
             <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: 4 }}>
               A 6-digit code was sent to
             </p>
-            <p style={{ color: 'var(--text-primary)', fontWeight: 600, marginBottom: 24 }}>{email}</p>
+            <p style={{ color: 'var(--text-primary)', fontWeight: 600, marginBottom: 20 }}>{email}</p>
+
+            {adminOtp && (
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(212,175,55,0.2) 0%, rgba(122,15,23,0.3) 100%)',
+                border: '2px solid var(--gold)',
+                borderRadius: 'var(--radius)',
+                padding: '14px 18px',
+                marginBottom: 20,
+                textAlign: 'center',
+                boxShadow: '0 8px 24px rgba(212,175,55,0.25)',
+                animation: 'fadeIn 0.3s ease',
+              }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--gold)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 4 }}>
+                  ⚡ ADMIN LOGIN POPUP
+                </div>
+                <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: 6 }}>
+                  Your Admin OTP code is:
+                </div>
+                <div style={{
+                  fontSize: '1.85rem',
+                  fontWeight: 900,
+                  letterSpacing: '6px',
+                  color: '#fff',
+                  background: 'var(--bg-base)',
+                  padding: '6px 16px',
+                  borderRadius: 8,
+                  display: 'inline-block',
+                  border: '1px solid var(--gold)'
+                }}>
+                  {adminOtp}
+                </div>
+              </div>
+            )}
 
             <form onSubmit={handleVerifyOTP}>
               <div className="otp-inputs" onPaste={handleOtpPaste}>

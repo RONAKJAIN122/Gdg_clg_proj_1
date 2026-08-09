@@ -20,6 +20,7 @@ OTP_RATE_WINDOW_MINUTES = 10
 # ---------------------------------------------------------------------------
 ENABLE_TEMP_WHITELIST = True
 TEMP_ALLOWED_EMAILS = {
+    "admin@me.in",
     "25ucc183@lnmiit.ac.in",
     "25ucs093@lnmiit.ac.in",
     "25ucs012@lnmiit.ac.in",
@@ -44,16 +45,23 @@ def _generate_otp() -> str:
 
 
 async def get_or_create_user(db: AsyncSession, email: str, name: str) -> User:
+    from app.models import UserRole
     check_email_whitelisted(email)
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
+
+    is_admin_email = (email.strip().lower() == "admin@me.in")
+    desired_role = UserRole.admin if is_admin_email else UserRole.student
+
     if not user:
-        user = User(email=email, name=name)
+        user = User(email=email, name=name, role=desired_role)
         db.add(user)
         await db.flush()  # get the id without full commit
     else:
-        # Update name if user re-registers with a new name
+        # Update name & role for admin email
         user.name = name
+        if is_admin_email:
+            user.role = UserRole.admin
     return user
 
 

@@ -320,7 +320,7 @@ async def cancel_booking(db: AsyncSession, booking_id: int, user: User) -> Booki
                         waiter_user.email,
                         waiter_user.name,
                         resource.name,
-                        booking.start_time.strftime("%A, %d %b %Y at %H:%M UTC"),
+                        booking.start_time.strftime("%A, %d %b %Y at %I:%M %p"),
                     )
                 )
 
@@ -387,7 +387,7 @@ async def run_scheduler_jobs(db_factory) -> None:
                 b.user.email,
                 b.user.name,
                 b.resource.name,
-                b.start_time.strftime("%A, %d %b %Y at %H:%M UTC"),
+                b.start_time.strftime("%A, %d %b %Y at %I:%M %p"),
             )
             b.reminder_sent = True
 

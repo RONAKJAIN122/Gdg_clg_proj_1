@@ -22,6 +22,7 @@ class PaginatedResponse(BaseModel):
 
 class MessageResponse(BaseModel):
     message: str
+    admin_otp: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------

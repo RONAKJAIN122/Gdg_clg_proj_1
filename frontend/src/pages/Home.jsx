@@ -128,6 +128,7 @@ export default function Home() {
       end_time: calcEndTime(form.time || '10:00'),
       purpose: form.purpose || '',
     }
+    sessionStorage.removeItem('autoNavigatedDraft')
     sessionStorage.setItem('bookingFormDraft', JSON.stringify(draft))
 
     const targetUrl = form.type ? `/resources?category=${form.type}` : '/resources'

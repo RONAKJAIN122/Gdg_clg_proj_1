@@ -1115,7 +1115,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .mmt-search-btn:hover {
-  transform: translateX(-50%) translateY(-2px);
+  transform: translateY(-2px);
   box-shadow: 0 14px 40px rgba(122, 15, 23, 0.8), 0 0 20px rgba(212, 175, 55, 0.4);
 }
 

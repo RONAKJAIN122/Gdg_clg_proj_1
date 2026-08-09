@@ -83,6 +83,21 @@ export default function Resources() {
 
   useEffect(() => { fetchResources() }, [fetchResources])
 
+  // Auto-open target resource booking portal directly if draft was submitted from Home page
+  useEffect(() => {
+    const rawDraft = sessionStorage.getItem('bookingFormDraft')
+    if (rawDraft && resources.length > 0) {
+      const draft = JSON.parse(rawDraft)
+      if (!sessionStorage.getItem('autoNavigatedDraft')) {
+        sessionStorage.setItem('autoNavigatedDraft', 'true')
+        const targetRes = resources.find(r => !draft.type || r.category === draft.type) || resources[0]
+        if (targetRes) {
+          navigate(`/resources/${targetRes.id}`, { state: { draft }, replace: true })
+        }
+      }
+    }
+  }, [resources, navigate])
+
   const totalPages = Math.ceil(total / LIMIT)
 
   return (
