@@ -1,6 +1,18 @@
-# 🏛️ LNMIIT Smart Resource Booking Portal
+# 🏛️ LNMIIT Smart Campus Resource Booking Portal (CampusDesk)
 
-An enterprise-grade campus resource management and automated booking platform built for LNMIIT Jaipur. Enables students, faculty, and administrators to reserve Auditoriums, Lecture Halls, Photography Equipment (Sony DSLRs, Tripods), Discussion Rooms, and SAC Sports Facilities seamlessly.
+[![Live App](https://img.shields.io/badge/Live_App-Vercel-success?style=for-the-badge&logo=vercel)](https://gdg-clg-proj-1.vercel.app)
+[![API Docs](https://img.shields.io/badge/API_Docs-FastAPI-blue?style=for-the-badge&logo=fastapi)](https://lnmiit-booking-backend-430o.onrender.com/docs)
+[![Python](https://img.shields.io/badge/Backend-FastAPI_Python_3.11-darkgreen?style=for-the-badge&logo=python)](https://fastapi.tiangolo.com)
+[![React](https://img.shields.io/badge/Frontend-React_Vite-navy?style=for-the-badge&logo=react)](https://react.dev)
+
+A full-stack enterprise campus resource reservation engine built for **The LNM Institute of Information Technology (LNMIIT), Jaipur**. Enables students, faculty, and administrators to reserve Auditoriums, Lecture Halls, Photography & Media Gear (Sony DSLRs, Tripods, Mics), Discussion Rooms, and SAC Sports Grounds — featuring zero double-bookings, real-time availability timelines, and automated email reminders.
+
+---
+
+## 📹 Demo Video
+
+**Walkthrough Video Link (5-8 min)**:  
+
 
 ---
 
@@ -8,84 +20,111 @@ An enterprise-grade campus resource management and automated booking platform bu
 
 - 🚀 **Live Web Application (Vercel)**: [https://gdg-clg-proj-1.vercel.app](https://gdg-clg-proj-1.vercel.app)
 - ⚡ **Backend REST API & OpenAPI Docs (Render)**: [https://lnmiit-booking-backend-430o.onrender.com/docs](https://lnmiit-booking-backend-430o.onrender.com/docs)
-- ⏱️ **Automated Production Cron Status**: `Active 🟢` (APScheduler & Keep-Alive Ping)
+- 🗄️ **Managed Database (Render PostgreSQL)**: Production PostgreSQL with Row-Level Locking (`with_for_update()`)
+- ⏱️ **Automated Cron Jobs**: APScheduler running every 60s for email reminders & status completion
 
 ---
 
-## ✨ Features & Highlights
+## 🔑 Key Features Implemented
 
-- 🔐 **LNMIIT Domain OTP Authentication**: Passwordless login restricted strictly to `@lnmiit.ac.in` domain emails.
-- 🎨 **Dynamic Dark & Light Theme**: Curated high-contrast LNMIIT branding (Maroon `#7A0F17` & Gold `#D4AF37`) with smooth local persistence.
-- 📊 **Real-time Availability Timeline**: Read-only timeline grid preventing double-booking conflicts via SQLAlchemy row locks.
-- 📅 **Categorized Booking Management**:
-  - **Ongoing 🟢**: Events taking place right now (`start_time <= now <= end_time`).
-  - **Upcoming 📅**: Scheduled future reservations (`start_time > now`).
-  - **History 📜**: Completed and past event archives (`end_time < now`).
-- ⚡ **Auto-Draft Continuation**: Pre-fills category, resource, date, and 12-hour AM/PM start time directly from the homepage into the booking form.
-- 🛡️ **Role-Based Admin Panel**: Admin controls to approve/reject bookings, manage resources, and oversee campus metrics.
+1. **Authentication (Email OTP + JWT)**:
+   - Passwordless sign-in with 6-digit email OTPs (valid for 5 minutes, single use).
+   - Rate limited to max 3 OTP requests per email per 10 minutes (returns HTTP 429).
+   - JWT tokens with 24-hour expiration containing user ID and role (`student` or `admin`).
+   - Domain auto-fill support for `@lnmiit.ac.in`.
+
+2. **Concurrency-Safe Conflict Prevention**:
+   - Overlap formula: `startA < endB AND startB < endA`.
+   - Back-to-back bookings (e.g. `10:00–11:00` and `11:00–12:00`) are explicitly allowed.
+   - Pessimistic row locking (`with_for_update()`) in PostgreSQL guarantees zero double-booking races.
+   - Returning HTTP 409 Conflict with clashing slot details on overlap.
+
+3. **Automated Reminders & Background Maintenance**:
+   - Background APScheduler job checks every minute.
+   - Sends email reminders 1 hour before booking start (formatted cleanly in 12-hour AM/PM time).
+   - Auto-marks past confirmed bookings as `completed`.
+
+4. **MakeMyTrip-Style Production UI/UX**:
+   - Full hero section with official LNMIIT LIC building backdrop.
+   - Floating quick-reservation card with 4-column field grid.
+   - Real-time 12-hour AM/PM availability timeline grid.
+   - Live animated pulsing badges for ongoing bookings.
+   - Dark/Light mode toggle with persisted local preferences.
+
+5. **Admin Executive Control Panel**:
+   - Dedicated dashboard for campus admins to oversee reservations, filter by date/status, cancel any booking, and add/edit campus resources.
 
 ---
 
 ## 🛠️ Technology Stack
 
-- **Frontend**: React 18, Vite, React Router v6, Axios, Vanilla CSS with CSS Custom Tokens
-- **Backend**: FastAPI (Python 3.11), Pydantic v2, SQLAlchemy 2.0 Async
-- **Database**: PostgreSQL (Production) / SQLite Async (Development)
-- **Deployment**: Vercel (Frontend SPA) + Render / Railway (Backend Web Service + Managed Postgres)
-- **Background Scheduler**: APScheduler + Cron-Job Keep Alive
+- **Backend**: FastAPI (Python 3.11), SQLAlchemy 2.0 Async, Pydantic v2, APScheduler
+- **Database**: PostgreSQL (Production) / Async SQLite (Local Dev)
+- **Frontend**: React 18, Vite, React Router v6, Axios, Vanilla CSS Custom Tokens
+- **Email Service**: Brevo HTTP REST API (port 443) / Gmail SMTP
+- **Deployment**: Vercel (Frontend) + Render (Backend & PostgreSQL)
 
 ---
 
-## 🚀 One-Click Production Deployment
+## 💻 Local Setup & Execution Guide
 
-### 1. Backend + Database on Render (Render Blueprint)
-1. Push this repository to your GitHub account.
-2. Sign in to [Render.com](https://render.com).
-3. Click **New +** ➔ **Blueprint**.
-4. Connect this repository — Render will automatically detect [`render.yaml`](file:///c:/CSE_BABY/Gdg_clg_proj_1/render.yaml) and provision:
-   - Managed **PostgreSQL Database** (`lnmiit-booking-db`)
-   - FastAPI **Web Service** (`lnmiit-booking-backend`)
-5. Click **Apply**. Once deployed, copy your web service live API URL (`https://<your-backend>.onrender.com`).
+### Prerequisites
+- Python 3.10+
+- Node.js 18+
 
-### 2. Frontend on Vercel
-1. Sign in to [Vercel.com](https://vercel.com).
-2. Click **Add New...** ➔ **Project** and import your repository.
-3. Set **Framework Preset**: `Vite`
-4. Set **Root Directory**: `frontend`
-5. Add Environment Variable:
-   - `VITE_API_URL` = `https://<your-backend>.onrender.com`
-6. Click **Deploy**. Vercel will build and launch your frontend application!
+### 1. Clone the Repository
+```bash
+git clone https://github.com/RONAKJAIN122/Gdg_clg_proj_1.git
+cd Gdg_clg_proj_1
+```
 
-### 3. Production Cron Job Setup
-To ensure Render's free tier remains awake and runs automatic booking completion cleanup:
-1. Log into [cron-job.org](https://cron-job.org).
-2. Add a new job hitting `https://<your-backend>.onrender.com/api/bookings/me` every 10 minutes (`*/10 * * * *`).
-
----
-
-## 💻 Local Development Setup
-
-### Backend Setup
+### 2. Backend Setup
 ```bash
 cd backend
 python -m venv venv
+
 # On Windows:
-.\venv\Scripts\activate
+venv\Scripts\activate
+# On Linux/macOS:
+source venv/bin/activate
+
 pip install -r requirements.txt
-python -m uvicorn app.main:app --reload --port 8000
 ```
 
-### Frontend Setup
+#### Environment Variables (`backend/.env`)
+Create a `.env` file in the `backend/` directory:
+```env
+DATABASE_URL=sqlite+aiosqlite:///./test.db
+SECRET_KEY=super-secret-key-change-this-in-production
+ACCESS_TOKEN_EXPIRE_MINUTES=1440
+EMAIL_FROM=lnmiiitopt@gmail.com
+BREVO_API_KEY=your_brevo_api_key_here
+```
+
+#### Run Backend Server & Auto-Seed
+```bash
+python -m uvicorn app.main:app --reload --port 8000
+```
+*Note: The server automatically seeds 1 Admin user (`admin@me.in`), student accounts, and 13 LNMIIT campus resources on initial startup!*
+
+### 3. Frontend Setup
+In a new terminal:
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-Visit local app: `http://localhost:5173`  
-Backend API Docs: `http://localhost:8000/docs`
+Visit local app: [http://localhost:5173](http://localhost:5173)  
+Backend API Documentation: [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ---
 
-## 📄 License
-Distributed under the MIT License. Built for LNMIIT Campus Community.
+## 📄 Documentation
+
+- 📘 [`DESIGN.md`](./DESIGN.md) — Comprehensive technical design document covering overlap math, concurrency protection, state persistence, and debugging case studies.
+
+---
+
+## 📜 License
+Distributed under the MIT License. Built for LNMIIT GDG Recruitment 2026.
