@@ -18,15 +18,10 @@ OTP_RATE_WINDOW_MINUTES = 10
 # ---------------------------------------------------------------------------
 # TEMPORARY TESTING WHITELIST (Set ENABLE_TEMP_WHITELIST = False to disable)
 # ---------------------------------------------------------------------------
-ENABLE_TEMP_WHITELIST = False
+ENABLE_TEMP_WHITELIST = True
 TEMP_ALLOWED_EMAILS = {
     "admin@me.in",
     "25ucc183@lnmiit.ac.in",
-    "25ucs093@lnmiit.ac.in",
-    "25ucs012@lnmiit.ac.in",
-    "25ucs216@lnmiit.ac.in",
-    "lnmiiitopt@gmail.com",
-    "jain.ronak122@gmail.com",
 }
 
 
