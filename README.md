@@ -39,13 +39,12 @@ A full-stack enterprise campus resource reservation engine built for **The LNM I
    - Pessimistic row locking (`with_for_update()`) in PostgreSQL guarantees zero double-booking races.
    - Returning HTTP 409 Conflict with clashing slot details on overlap.
 
-3. **Automated Reminders & Background Maintenance**:
-   - Background APScheduler job checks every minute.
+3. **Automated Reminders**:
    - Sends email reminders 1 hour before booking start (formatted cleanly in 12-hour AM/PM time).
    - Auto-marks past confirmed bookings as `completed`.
 
 4. **MakeMyTrip-Style Production UI/UX**:
-   - Full hero section with official LNMIIT LIC building backdrop.
+   - Full hero section with official LNMIIT building backdrop.
    - Floating quick-reservation card with 4-column field grid.
    - Real-time 12-hour AM/PM availability timeline grid.
    - Live animated pulsing badges for ongoing bookings.
@@ -66,65 +65,7 @@ A full-stack enterprise campus resource reservation engine built for **The LNM I
 
 ---
 
-## 💻 Local Setup & Execution Guide
-
-### Prerequisites
-- Python 3.10+
-- Node.js 18+
-
-### 1. Clone the Repository
-```bash
-git clone https://github.com/RONAKJAIN122/Gdg_clg_proj_1.git
-cd Gdg_clg_proj_1
-```
-
-### 2. Backend Setup
-```bash
-cd backend
-python -m venv venv
-
-# On Windows:
-venv\Scripts\activate
-# On Linux/macOS:
-source venv/bin/activate
-
-pip install -r requirements.txt
-```
-
-#### Environment Variables (`backend/.env`)
-Create a `.env` file in the `backend/` directory:
-```env
-DATABASE_URL=sqlite+aiosqlite:///./test.db
-SECRET_KEY=super-secret-key-change-this-in-production
-ACCESS_TOKEN_EXPIRE_MINUTES=1440
-EMAIL_FROM=lnmiiitopt@gmail.com
-BREVO_API_KEY=your_brevo_api_key_here
-```
-
-#### Run Backend Server & Auto-Seed
-```bash
-python -m uvicorn app.main:app --reload --port 8000
-```
-*Note: The server automatically seeds 1 Admin user (`admin@me.in`), student accounts, and 13 LNMIIT campus resources on initial startup!*
-
-### 3. Frontend Setup
-In a new terminal:
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Visit local app: [http://localhost:5173](http://localhost:5173)  
-Backend API Documentation: [http://localhost:8000/docs](http://localhost:8000/docs)
-
----
-
 ## 📄 Documentation
 
 - 📘 [`DESIGN.md`](./DESIGN.md) — Comprehensive technical design document covering overlap math, concurrency protection, state persistence, and debugging case studies.
 
----
-
-## 📜 License
-Distributed under the MIT License. Built for LNMIIT GDG Recruitment 2026.
