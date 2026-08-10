@@ -11,7 +11,7 @@ A full-stack enterprise campus resource reservation engine built for **The LNM I
 
 ## 📹 Demo Video
 
-**Walkthrough Video Link (5-8 min)**:  
+- 🎥 **Walkthrough Video Link (YouTube)**: [https://www.youtube.com/watch?v=7YGtv29cGJ4](https://www.youtube.com/watch?v=7YGtv29cGJ4) *(1 min 40 sec walkthrough of application workflow, passwordless OTP sign-in, overlap conflict prevention, and admin command center)*
 
 
 ---
